@@ -30,12 +30,11 @@ function validateLogin($arrInput)
 
     global $CFG, $DB;
 
-    $vUserId = $arrInput['userid'];
     $vUsername = $arrInput['username'];
     $vPassword = $arrInput['password'];
 
-    $vUsername = 'admin';
-    $vPassword = 'Learn@123';
+    // $vUsername = 'admin';
+    // $vPassword = 'Learn@123';
 
     $query = "select id from mdl_user where username like BINARY '$vUsername'";
     $vUsernameExits = $DB->get_record_sql($query);
@@ -85,6 +84,31 @@ function validateLogin($arrInput)
 
                 $DB->insert_record('user_private_key', $objUserAuth);
 
+            }
+
+            //check whether the user have other than the student role
+            $vInstructors = 0;
+            $query = "SELECT id FROM mdl_role_assignments WHERE roleid = 3 and userid = $objUser->id group by roleid";
+            $objInstructorsRoles = $DB->get_records_sql($query);
+            foreach ($objInstructorsRoles as $role) {
+                $vInstructors++;
+            }
+
+            //check whether the user have other than the student role
+            $vHr = 0;
+            $objHrRoles = $DB->get_records_sql("SELECT id FROM mdl_role_assignments WHERE roleid =11 and userid = $objUser->id group by roleid");
+            //print_r($objHrRoles);
+            //exit;
+            foreach ($objHrRoles as $role) {
+                $vHr++;
+            }
+
+            if ($vHr > 0) {
+                $vRole = 'hr';
+            } else if ($vInstructors > 0) {
+                $vRole = 'instructor';
+            } else {
+                $vRole = 'learner';
             }
 
             $arrResults['Data']['result'] = 1;
