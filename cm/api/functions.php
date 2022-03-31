@@ -123,38 +123,53 @@ function validateLogin($arrInput)
             $arrResults['Data']['city'] = $objUser->city;
             $arrResults['Data']['phone1'] = $objUser->phone1;
             $arrResults['Data']['role'] = $vRole;
-            $arrResults['Data']['paytm_id'] = $CFG->Merchant_ID;
-            $arrResults['Data']['colorcode'] = $objTeacherConfig->color_code;
-            $arrResults['Data']['fontcolorcode'] = $objTeacherConfig->font_color;
-
-            if (strpos($objTeacherConfig->logo_path, 'Choose Logo') !== false) {
-                $vLogoAvailable = false;
-
-            } else {
-                $vLogoAvailable = true;
-            }
-
-            if ($objTeacherConfig->logo_path != '' and $vLogoAvailable == true) {
-                $arrResults['Data']['customlogo'] = $CFG->wwwroot . '/cm/custom_api/' . $objTeacherConfig->logo_path;
-            } else {
-                $arrResults['Data']['customlogo'] = null;
-            }
-
         } else {
             $arrResults['Data']['result'] = 0;
             $arrResults['Data']['token'] = '';
             $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
-
         }
 
     } else {
-
         $arrResults['Data']['result'] = 0;
         $arrResults['Data']['token'] = '';
         $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
-
     }
 
     return $arrResults;
+}
 
+function getUserList()
+{
+    global $DB;
+    $_POST["wstoken"] = 'qwerty';
+
+    if (isset($_POST["wstoken"])) {
+
+        $q1 = "select value from mdl_config where name='siteadmins'";
+
+        $siteadmins_rec = $DB->get_record_sql($q1);
+
+        $siteadmins = $siteadmins_rec->value;
+
+        $q = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
+             from mdl_user u where u.deleted = 0 and u.id > 1 and
+             u.id NOT IN($siteadmins)";
+
+        $res = $DB->get_records_sql($q);
+
+        $arrReturn["ResponseMessage"] = 'Success';
+
+        foreach ($res as $rec) {
+            $data = new stdClass;
+            $data->userid = $rec->id;
+            $data->username = $rec->username;
+            $data->firstname = $rec->firstname;
+            $data->lastname = $rec->lastname;
+            $data->createdon = (!empty($rec->timecreated)) ? date("d-M-Y", $rec->timecreated) : null;
+            $data->lastaccess = (!empty($rec->lastaccess)) ? date("d-M-Y", $rec->lastaccess) : null;
+            $data->suspended = $rec->suspended;
+            $arrReturn['Data'][] = $data;
+        }
+    }
+    return $arrReturn;
 }
