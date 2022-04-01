@@ -141,7 +141,6 @@ function validateLogin($arrInput)
 function getUserList()
 {
     global $DB;
-    $_POST["wstoken"] = 'qwerty';
 
     if (isset($_POST["wstoken"])) {
 
@@ -172,4 +171,206 @@ function getUserList()
         }
     }
     return $arrReturn;
+}
+
+function already_taken_validator()
+{
+    global $DB;
+    $response = new stdClass();
+    $not_in_query_param = null;
+    $second_query_param = null;
+
+    if (!empty($_POST['edit_id'])) {
+        $edit_id = $_POST['edit_id'];
+        $not_in_query_param = "and id not in($edit_id)";
+    }
+
+    if (!empty($_POST['field_name2'])) {
+        $field_name2 = $_POST['field_name2'];
+        $field_value2 = $_POST['field_value2'];
+        $second_query_param = "and $field_name2 in($field_value2)";
+    }
+
+    $table_name = $_POST['table_name'];
+    $field_name = $_POST['field_name'];
+    $field_value = $_POST['field_value'];
+
+    $sql = "SELECT * FROM $table_name where $field_name = '$field_value' $second_query_param $not_in_query_param";
+    $res = $DB->get_record_sql($sql);
+
+    $response->exists = (!empty($res)) ? 1 : 0;
+
+    $arrReturn["ResponseMessage"] = (!empty($res)) ? " $field_name already Taken" : "New data";
+
+    if ((!empty($_POST['field_name2'])) && ($response->exists == 0)) {
+        $field_value = $_POST['field_value'];
+        $field_value = strtolower($field_value);
+        $response->exists = ($field_value == 'new') ? 1 : 0;
+        $arrReturn["ResponseMessage"] = (!empty($res)) ? "Ready to edit this current record based on id" : "$field_name2 Already Taken";
+    }
+    $arrReturn["Data"] = $response;
+
+    return $arrReturn;
+}
+
+function addNewUser()
+{
+    global $DB, $CFG;
+    $response = new stdClass;
+
+    if (isset($_POST["username"])) {
+        $mainusername = $_POST['username'];
+        $password = trim($_POST['new_pwd'], ' ');
+        $email = $_POST['email'];
+        $fname = $_POST['first_name'];
+        $surname = $_POST['surname'];
+        $city_town = $_POST['location'];
+        $country = $_POST['country'];
+    }
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+    $new_user = new stdClass();
+    $new_user->username = $mainusername;
+    $new_user->password = $password;
+    $new_user->firstname = $fname;
+    $new_user->lastname = $surname;
+    $new_user->email = $email;
+    $new_user->auth = 'manual';
+    $new_user->idnumber = '';
+    $new_user->lang = 'en';
+    $new_user->timezone = '';
+    $new_user->mailformat = 0;
+    $new_user->description = '';
+    $new_user->city = $city_town;
+    $new_user->country = $country;
+    $preference = 'auth_forcepasswordchange';
+    $new_user->preferences = array(
+        array('type' => $preference, 'value' => 'true'),
+    );
+    $users = array($new_user);
+    $params = array('users' => $users);
+
+    $curl = new curl();
+    $response = $curl->post($server_url, $params);
+
+    $arrReturn["Data"] = $response;
+
+    return $arrReturn;
+}
+
+function getUser()
+{
+    global $DB;
+    $response = array();
+
+    // $_POST["user_id"] = 5;
+
+    if (isset($_POST["user_id"])) {
+
+        $user_id = $_POST["user_id"];
+        $sql = "select * from mdl_user where id = $user_id";
+        $res1 = $DB->get_records_sql($sql);
+
+        foreach ($res1 as $rec) {
+            $data = new stdClass;
+            $data->username = $rec->username;
+            $data->firstname = $rec->firstname;
+            $data->lastname = $rec->lastname;
+            $data->email = $rec->email;
+            $data->city = $rec->city;
+            $data->country = $rec->country;
+            $response[] = $data;
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function updateUser()
+{
+    global $CFG;
+    $response = new stdClass();
+    $user_id = $_POST["user_id"];
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+    $firstname = $_POST['first_name'];
+    $lastname = $_POST['surname'];
+    $city = $_POST['location'];
+    $country = $_POST['country'];
+
+    $username = array('id' => $user_id, 'firstname' => $firstname, 'lastname' => $lastname, 'city' => $city, 'country' => $country);
+
+    $users[] = $user_id;
+
+    $params = array('users' => array($username));
+
+    $curl = new curl();
+    $response->status = $curl->post($server_url, $params);
+
+    $arrResults['Data'] = $response->status;
+
+    return json_encode($response);
+}
+
+function deleteUser()
+{
+
+    global $DB, $CFG;
+    $response = new stdClass();
+
+    if (isset($_POST["user_id"])) {
+
+        $user_id = $_POST["user_id"];
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $users[] = $user_id;
+
+        $params = array('userids' => $users);
+
+        $curl = new curl();
+        $response->status = $curl->post($server_url, $params);
+
+        $arrResults['Data'] = $response;
+
+    }
+    return $arrResults;
+
+}
+
+function suspendUser()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+
+    if ((isset($_POST["user_id"])) && (isset($_POST["mode"]))) {
+
+        $user_id = $_POST["user_id"];
+        $mode = $_POST["mode"];
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $username = array('id' => $user_id, 'suspended' => $mode);
+
+        $users[] = $user_id;
+
+        $params = array('users' => array($username));
+
+        $curl = new curl();
+        $response->status = $curl->post($server_url, $params);
+
+        $arrResults['Data'] = $response;
+
+    }
+    return $arrResults;
 }
