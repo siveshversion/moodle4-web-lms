@@ -374,3 +374,215 @@ function suspendUser()
     }
     return $arrResults;
 }
+
+function listCategories()
+{
+    global $DB;
+    $response = array();
+    if (isset($_POST['userId'])) {
+        $q = "SELECT * FROM {course_categories} where visible=1 and id > 1";
+        $categories = $DB->get_records_sql($q);
+        foreach ($categories as $rec) {
+            $new_data = new stdClass();
+            $new_data->category_name = $rec->name;
+            $new_data->category_id = $rec->id;
+            $new_data->category_courses_cnt = get_course_cnt_by_cat($rec->id);
+            $response[] = $new_data;
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function get_course_cnt_by_cat($cat_id)
+{
+    global $DB;
+    $cnt_cid = null;
+    $sql = "SELECT count(id) as cnt_cid FROM {course} WHERE category='$cat_id'";
+    $rec = $DB->get_record_sql($sql);
+    $cnt_cid = $rec->cnt_cid;
+    return $cnt_cid;
+}
+
+function createCategory()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+        $category_name = $_POST['category_name'];
+        $description = $_POST['category_description'];
+        $category_code = '';
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $params = array(
+            'categories' => array(
+                array(
+                    'name' => $category_name,
+                    'parent' => '0',
+                    'idnumber' => $category_code,
+                    'description' => $description,
+                    'descriptionformat' => '1',
+                ),
+            ),
+        );
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+
+            $json_arr = json_decode($curl_response, true);
+            foreach ($json_arr as $rec) {
+                $response->name = $rec['shortname'];
+                $response->id = $rec['id'];
+            }
+            $response->result = (!empty($response->id)) ? 1 : null;
+            $arrResults['Data'] = $response;
+        }
+
+    }
+    return $arrResults;
+}
+
+function get_category_by_id()
+{
+    global $DB;
+
+    $response = new stdClass();
+
+    if (isset($_POST['cat_id'])) {
+        $cat_id = $_POST['cat_id'];
+
+        $sql = "select * from mdl_course_categories where id='$cat_id'";
+        $rec = $DB->get_record_sql($sql);
+
+        $response->name = $rec->name;
+        $response->description = strip_tags($rec->description);
+
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function updateCategory()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+        $category_id = $_POST['cat_id'];
+        $category_name = $_POST['category_name'];
+        $description = $_POST['category_description'];
+        $category_code = '';
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $params = array(
+            'categories' => array(
+                array(
+                    'id' => $category_id,
+                    'name' => $category_name,
+                    'parent' => '0',
+                    'idnumber' => $category_code,
+                    'description' => $description,
+                    'descriptionformat' => '1',
+                ),
+            ),
+        );
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+            $response->status = 'success';
+            $arrResults['Data'] = $response;
+        }
+    }
+    return $arrResults;
+}
+
+function listCourses()
+{
+    global $DB;
+    $response = array();
+    if (isset($_POST['userId'])) {
+        $q = "SELECT * FROM {course} where visible=1 and category > 0";
+        $categories = $DB->get_records_sql($q);
+        foreach ($categories as $rec) {
+            $new_data = new stdClass();
+            $cat = new stdClass();
+            $cat->tablename = 'course_categories';
+            $cat->fieldname = 'name';
+            $cat->id = $rec->category;
+            $new_data->course_fullname = $rec->fullname;
+            $new_data->course_shortname = $rec->shortname;
+            $new_data->category_name = get_field_by_id($cat);
+            $new_data->course_id = $rec->id;
+            $response[] = $new_data;
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function get_field_by_id($cat)
+{
+    global $DB, $CFG;
+    $q = "Select $cat->fieldname from $CFG->prefix" . "$cat->tablename where id =$cat->id";
+    $category = $DB->get_record_sql($q);
+    return $category->name;
+}
+
+function create_course()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $course_category = $_POST['course_category'];
+        $course_name = $_POST['course_full_name'];
+        $course_shortname = $_POST['course_short_name'];
+        $course_summary = $_POST['course_description'];
+        $enrollment_type = $_POST['enroll_type'];
+
+        if ($enrollment_type == 'self') {
+            $enroll_methods = 'Learning self';
+        } else if ($enrollment_type == 'admin') {
+            $enroll_methods = 'Learning manual';
+        }
+
+        $num_sections = $_POST['topicCnt'];
+        $course_code = '';
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $params = array(
+            'courses' => array(
+                array(
+                    'fullname' => $course_name,
+                    'shortname' => $course_shortname,
+                    'categoryid' => $course_category,
+                    'idnumber' => $course_code,
+                    'summary' => $course_summary,
+                    'format' => 'topcoll',
+                    'numsections' => $num_sections,
+                ),
+            ),
+        );
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+            $json_arr = json_decode($curl_response, true);
+            foreach ($json_arr as $rec) {
+                $response->name = $rec['shortname'];
+                $response->id = $rec['id'];
+            }
+            $arrResults['Data'] = $response;
+        }
+    }
+    return $arrResults;
+}
