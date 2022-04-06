@@ -506,18 +506,25 @@ function listCourses()
 {
     global $DB;
     $response = array();
+    if (isset($_POST['catId'])) {
+        $catId = $_POST['catId'];
+    }
+    $categoryFilter = isset($catId) ? "category=$catId" : "category > 0";
     if (isset($_POST['userId'])) {
-        $q = "SELECT * FROM {course} where visible=1 and category > 0";
+        $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
         $categories = $DB->get_records_sql($q);
         foreach ($categories as $rec) {
             $new_data = new stdClass();
             $cat = new stdClass();
             $cat->tablename = 'course_categories';
             $cat->fieldname = 'name';
+            $cat->recid = 'id';
             $cat->id = $rec->category;
             $new_data->course_fullname = $rec->fullname;
             $new_data->course_shortname = $rec->shortname;
-            $new_data->category_name = get_field_by_id($cat);
+            $category = get_field_by_id($cat);
+            $new_data->category_id = $category->id;
+            $new_data->category_name = $category->name;
             $new_data->course_id = $rec->id;
             $response[] = $new_data;
         }
@@ -529,9 +536,9 @@ function listCourses()
 function get_field_by_id($cat)
 {
     global $DB, $CFG;
-    $q = "Select $cat->fieldname from $CFG->prefix" . "$cat->tablename where id =$cat->id";
-    $category = $DB->get_record_sql($q);
-    return $category->name;
+    $q = "Select $cat->fieldname,$cat->recid from $CFG->prefix" . "$cat->tablename where id =$cat->id";
+    $response = $DB->get_record_sql($q);
+    return $response;
 }
 
 function create_course()
@@ -585,4 +592,97 @@ function create_course()
         }
     }
     return $arrResults;
+}
+
+function get_course_by_id()
+{
+    global $DB, $CFG;
+
+    $response = new stdClass();
+
+    if (isset($_POST['course_id'])) {
+
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $course_id = $_POST['course_id'];
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $ids = array($course_id);
+
+        $params = array('options' => array('ids' => $ids));
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+            $json_arr = json_decode($curl_response, true);
+            foreach ($json_arr as $rec) {
+                $response->fullname = $rec['fullname'];
+                $response->shortname = $rec['shortname'];
+                $response->description = strip_tags($rec['summary']);
+                $response->category = $rec['categoryid'];
+                $response->topics_cnt = $rec['numsections'];
+                $response->enrol_method = 'manual';
+            }
+            $arrResults['Data'] = $response;
+        }
+
+    }
+    return $arrResults;
+}
+
+function update_course()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $course_id = $_POST['course_id'];
+        $course_category = $_POST['course_category'];
+        $course_name = $_POST['course_full_name'];
+        $course_shortname = $_POST['course_short_name'];
+        $course_summary = $_POST['course_description'];
+        $enrollment_type = $_POST['enroll_type'];
+        $old_enroll_id = $_POST['old_enroll_id'];
+
+        if ($enrollment_type == 'self') {
+            $enroll_methods = 'Learning self';
+        } else if ($enrollment_type == 'admin') {
+            $enroll_methods = 'Learning manual';
+        }
+
+        $num_sections = $_POST['topicCnt'];
+        $course_code = '';
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $params = array(
+            'courses' => array(
+                array(
+                    'id' => $course_id,
+                    'fullname' => $course_name,
+                    'shortname' => $course_shortname,
+                    'categoryid' => $course_category,
+                    'idnumber' => $course_code,
+                    'summary' => $course_summary,
+                    'format' => 'topcoll',
+                    'numsections' => $num_sections,
+                ),
+            ),
+        );
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+
+        if (!empty($curl_response)) {
+            $arrResults['Data'] = $curl_response;
+        }
+
+    }
+    return $arrResults;
+
 }
