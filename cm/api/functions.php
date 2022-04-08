@@ -86,30 +86,22 @@ function validateLogin($arrInput)
 
             }
 
-            //check whether the user have other than the student role
-            $vInstructors = 0;
-            $query = "SELECT id FROM mdl_role_assignments WHERE roleid = 3 and userid = $objUser->id group by roleid";
-            $objInstructorsRoles = $DB->get_records_sql($query);
-            foreach ($objInstructorsRoles as $role) {
-                $vInstructors++;
-            }
+            $knownsiteadmins = $CFG->siteadmins;
+            $siteadmins = explode(',', $CFG->siteadmins);
+            $siteAdmin = in_array($vUsernameExits->id, $siteadmins);
 
-            //check whether the user have other than the student role
-            $vHr = 0;
-            $objHrRoles = $DB->get_records_sql("SELECT id FROM mdl_role_assignments WHERE roleid =11 and userid = $objUser->id group by roleid");
-            //print_r($objHrRoles);
-            //exit;
-            foreach ($objHrRoles as $role) {
-                $vHr++;
-            }
-
-            if ($vHr > 0) {
-                $vRole = 'hr';
-            } else if ($vInstructors > 0) {
-                $vRole = 'instructor';
+            if ($siteAdmin) {
+                $vRole = 'admin';
             } else {
-                $vRole = 'learner';
+                //check whether the user has the student role
+                $vLearners = 0;
+                $query = "SELECT id FROM mdl_role_assignments WHERE roleid = 5
+                            and userid = $objUser->id group by roleid";
+                $objInstructorsRoles = $DB->get_records_sql($query);
+            
+                $vRole = 'student';
             }
+     
 
             $arrResults['Data']['result'] = 1;
             $arrResults['Data']['message'] = 'Success';
@@ -509,11 +501,18 @@ function listCourses()
     if (isset($_POST['catId'])) {
         $catId = $_POST['catId'];
     }
+    $wstoken = $_POST['wstoken'];
+
     $categoryFilter = isset($catId) ? "category=$catId" : "category > 0";
+
+    $moodledata = new stdClass();
+    $moodledata->wsfunction = $_POST['wsfunction'];
+    $moodledata->wstoken = $wstoken;
+
     if (isset($_POST['userId'])) {
         $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
-        $categories = $DB->get_records_sql($q);
-        foreach ($categories as $rec) {
+        $courses = $DB->get_records_sql($q);
+        foreach ($courses as $rec) {
             $new_data = new stdClass();
             $cat = new stdClass();
             $cat->tablename = 'course_categories';
@@ -526,6 +525,8 @@ function listCourses()
             $new_data->category_id = $category->id;
             $new_data->category_name = $category->name;
             $new_data->course_id = $rec->id;
+            $participants = getEnrolledUsers($rec->id, $moodledata);
+            $new_data->enrolled_cnt = count($participants);
             $response[] = $new_data;
         }
         $arrResults['Data'] = $response;
@@ -685,4 +686,139 @@ function update_course()
     }
     return $arrResults;
 
+}
+
+function getCourseUsers()
+{
+    global $DB;
+    $response = array();
+
+    $course_id = $_POST['course_id'];
+    $enroll_status = $_POST['enroll_status'];
+
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+
+    $moodledata = new stdClass();
+    $moodledata->wsfunction = $wsfunction;
+    $moodledata->wstoken = $wstoken;
+
+    $enrolled_userids_arr = getEnrolledUsers($course_id, $moodledata);
+
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname FROM `mdl_user` where deleted = 0 and username not in('guest','admin')";
+    $res = $DB->get_records_sql($sql);
+    $i = 1;
+    foreach ($res as $rec) {
+        $new_data = new stdClass();
+        $new_data->sl_no = $i;
+        $new_data->user_name = $rec->fullname;
+        $new_data->user_id = $rec->id;
+        $new_data->enrolled = in_array($rec->id, $enrolled_userids_arr) ? true : false;
+
+        if ($enroll_status == 'all') {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->enrolled == false) && ($enroll_status == 'not_enrolled')) {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->enrolled == true) && ($enroll_status == 'enrolled')) {
+            $i++;
+            $response[] = $new_data;
+        }
+    }
+    $arrResults['Data'] = $response;
+    return $arrResults;
+}
+
+function getEnrolledUsers($courseid, $moodledata)
+{
+    global $CFG;
+    $userids_arr = array();
+    $wsfunction = $moodledata->wsfunction;
+    $wstoken = $moodledata->wstoken;
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+    $params = array('courseid' => $courseid);
+
+    $curl = new curl();
+    $curl_response = $curl->post($server_url, $params);
+    $json_arr = json_decode($curl_response, true);
+
+    foreach ($json_arr as $rec) {
+        $userids_arr[] = $rec['id'];
+    }
+
+    return $userids_arr;
+}
+
+function enrollUserToCourse()
+{
+    global $DB, $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $course_id = $_POST['course_id'];
+        $user_id = $_POST['user_id'];
+        $role_id = $_POST['role_id'];
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $sql = "Select id from mdl_course_categories where id in(select category from mdl_course where id = '$course_id')";
+        $rec = $DB->get_record_sql($sql);
+        $response->cat_id = $rec->id;
+
+        $params = array(
+            'enrolments' => array(
+                array(
+                    'roleid' => $role_id,
+                    'userid' => $user_id,
+                    'courseid' => $course_id,
+                ),
+            ),
+        );
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+            $response->status = 1;
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+
+}
+
+function unenrollUserToCourse()
+{
+    global $CFG;
+    $response = new stdClass();
+    if (isset($_POST['wsfunction'])) {
+        $wsfunction = $_POST['wsfunction'];
+        $wstoken = $_POST['wstoken'];
+
+        $course_id = $_POST['course_id'];
+        $user_id = $_POST['user_id'];
+
+        $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+        $params = array(
+            'enrolments' => array(
+                array(
+                    'userid' => $user_id,
+                    'courseid' => $course_id,
+                ),
+            ),
+        );
+
+        $curl = new curl();
+        $curl_response = $curl->post($server_url, $params);
+        if (!empty($curl_response)) {
+            $response->status = 1;
+            $arrResults['Data'] = $response;
+        }
+    }
+    return $arrResults;
 }
