@@ -51,12 +51,12 @@ function validateLogin($arrInput)
 
         $params = array('username' => $vUsername, 'password' => $vPassword);
 
-        $serverurl = $CFG->wwwroot . '/login/token.php?service=moodle_mobile_app';
+        $server_url = $CFG->wwwroot . '/login/token.php?service=moodle_mobile_app';
 
         $curl = new curl;
         $restformat = ($restformat == 'json') ? '&moodlewsrestformat=' . $restformat : '';
 
-        $resp = $curl->post($serverurl . $restformat, $params);
+        $resp = $curl->post($server_url . $restformat, $params);
 
         $arrToken = json_decode($resp, true);
 
@@ -98,10 +98,9 @@ function validateLogin($arrInput)
                 $query = "SELECT id FROM mdl_role_assignments WHERE roleid = 5
                             and userid = $objUser->id group by roleid";
                 $objInstructorsRoles = $DB->get_records_sql($query);
-            
+
                 $vRole = 'student';
             }
-     
 
             $arrResults['Data']['result'] = 1;
             $arrResults['Data']['message'] = 'Success';
@@ -820,5 +819,79 @@ function unenrollUserToCourse()
             $arrResults['Data'] = $response;
         }
     }
+    return $arrResults;
+}
+
+function getMyEnrolledCourses($arrInput)
+{
+    global $CFG, $DB;
+
+    $vUserId = $arrInput["userid"];
+    $token = $arrInput["user_key"];
+
+    $objCategories = $DB->get_records('course_categories');
+
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+
+    //get total course count
+    $vTotalCoursesCount = $DB->count_records_sql("SELECT count(*) as total_courses FROM `mdl_course` WHERE id > 1 and visible = 1");
+
+    $params = array('userid' => $vUserId);
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+    $curl = new curl;
+    $restformat = ($restformat == 'json') ? '&moodlewsrestformat=' . $restformat : '';
+    $resp = $curl->post($server_url . $restformat, $params);
+    $arrEnrolledCourses = json_decode($resp, true);
+
+    /*echo '<pre>';
+    print_r($arrEnrolledCourses);
+    echo '</pre>';*/
+
+    foreach ($arrEnrolledCourses as $course) {
+
+        //get cost
+        $sql = "select cost from {$CFG->prefix}enrol where courseid = $course[id] and enrol = 'credit'";
+        $objCourseCost = $DB->get_record_sql($sql);
+        if ($objCourseCost->cost != '') {
+            $vCredit = $objCourseCost->cost;
+        } else {
+            $vCredit = '0.00';
+        }
+
+        $arrDummyResults[$course["id"]]['id'] = $course["id"];
+        $arrDummyResults[$course["id"]]['fullname'] = $course["fullname"];
+        $arrDummyResults[$course["id"]]['categoryname'] = $objCategories[$course["category"]]->name;
+        $arrDummyResults[$course["id"]]['category'] = $course["category"];
+
+        if ($course["progress"] == '') {
+            $vProgress = 0;
+        } else {
+            $vProgress = $course["progress"];
+        }
+        $arrDummyResults[$course["id"]]['progress'] = $vProgress;
+        $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
+        $arrDummyResults[$course["id"]]['credits'] = $vCredit;
+
+        $count++;
+    }
+
+    rsort($arrDummyResults);
+
+    $count = 0;
+    foreach ($arrDummyResults as $course) {
+        $arrResults['Data'][$count]['id'] = $course["id"];
+        $arrResults['Data'][$count]['fullname'] = $course["fullname"];
+        $arrResults['Data'][$count]['category'] = $course["category"];
+        $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
+        $arrResults['Data'][$count]['progress'] = $course["progress"];
+        $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+        $arrResults['Data'][$count]['credits'] = $course["credits"];
+        $arrResults['Data'][$count]['status'] = 1;
+        $arrResults['Data'][$count]['total_course_count'] = $vTotalCoursesCount;
+
+        $count++;
+    }
+
     return $arrResults;
 }
