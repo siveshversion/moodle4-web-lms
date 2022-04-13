@@ -1035,10 +1035,9 @@ function getadminDashStats()
 
         $q2 = "SELECT count(id) as usersCount FROM {$CFG->prefix}user where id > 2 and deleted=0";
         $users = $DB->get_record_sql($q2);
-        
+
         $arrResults['Data']['usersCount'] = $users->userscount;
         $arrResults['Data']['coursesCount'] = $courses->coursescount;
-        
 
     }
 
