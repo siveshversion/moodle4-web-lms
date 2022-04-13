@@ -704,13 +704,14 @@ function getCourseUsers()
 
     $enrolled_userids_arr = getEnrolledUsers($course_id, $moodledata);
 
-    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname FROM `mdl_user` where deleted = 0 and username not in('guest','admin')";
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM `mdl_user` where deleted = 0 and username not in('guest','admin')";
     $res = $DB->get_records_sql($sql);
     $i = 1;
     foreach ($res as $rec) {
         $new_data = new stdClass();
         $new_data->sl_no = $i;
-        $new_data->user_name = $rec->fullname;
+        $new_data->user_name = $rec->username;
+        $new_data->user_fullname = $rec->fullname;
         $new_data->user_id = $rec->id;
         $new_data->enrolled = in_array($rec->id, $enrolled_userids_arr) ? true : false;
 
@@ -840,8 +841,7 @@ function getMyEnrolledCourses($arrInput)
     $params = array('userid' => $vUserId);
     $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
     $curl = new curl;
-    $restformat = ($restformat == 'json') ? '&moodlewsrestformat=' . $restformat : '';
-    $resp = $curl->post($server_url . $restformat, $params);
+    $resp = $curl->post($server_url, $params);
     $arrEnrolledCourses = json_decode($resp, true);
 
     /*echo '<pre>';
@@ -891,6 +891,155 @@ function getMyEnrolledCourses($arrInput)
         $arrResults['Data'][$count]['total_course_count'] = $vTotalCoursesCount;
 
         $count++;
+    }
+
+    return $arrResults;
+}
+
+function getCourseStatusCount($arrInput)
+{
+    global $DB, $CFG;
+
+    $vUserId = $arrInput['userid'];
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+    $params = array('userid' => $vUserId);
+
+    $curl = new curl;
+    $resp = $curl->post($server_url, $params);
+    $arrOutput = json_decode($resp, true);
+
+    $vEnrolledCount = 0;
+    $vCompletedCount = 0;
+    $vInprogressCount = 0;
+    $vNotstartedCount = 0;
+    foreach ($arrOutput as $course) {
+
+        $vEnrolledCount++;
+        if ($course[progress] == 100) {
+            $vCompletedCount++;
+        } else if ($course[progress] == 0) {
+            $vNotstartedCount++;
+        } else if ($course[progress] < 100 and $course[progress] > 0) {
+            $vInprogressCount++;
+        }
+
+    }
+    $arrResults['Data']['enrolled_courses'] = $vEnrolledCount;
+    $arrResults['Data']['complete_courses'] = $vCompletedCount;
+    $arrResults['Data']['plain_courses'] = $vNotstartedCount;
+    $arrResults['Data']['course_inprogress'] = $vInprogressCount;
+
+    return $arrResults;
+}
+
+function getCourseDetails($arrInput)
+{
+
+    global $CFG, $DB;
+
+    $wsfunction = $_POST['wsfunction'];
+    $wstoken = $_POST['wstoken'];
+    $vCourseId = $_POST['courseid'];
+
+    $curl = new curl;
+
+    $params = array('field' => 'id', 'value' => $vCourseId);
+
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+    $resp = $curl->post($server_url, $params);
+    $arrOutput = json_decode($resp, true);
+    $arrCourse = $arrOutput['courses'][0];
+
+    $count = 0;
+
+    $arrResults['Data']['id'] = $arrCourse['id'];
+    $arrResults['Data']['displayname'] = $arrCourse['displayname'];
+    $arrResults['Data']['categoryname'] = $arrCourse['categoryname'];
+    $arrResults['Data']['summary'] = $arrCourse['summary'];
+
+    $count++;
+
+    return $arrResults;
+
+}
+
+function getModuleDetails($arrInput)
+{
+    global $CFG, $DB;
+
+    $vUserId = $arrInput['user_id'];
+    $wstoken = $arrInput['wstoken'];
+    $vCourseId = $arrInput['courseid'];
+
+    //get module status
+    $wsfunction1 = 'core_completion_get_activities_completion_status';
+    $params = array('userid' => $vUserId, 'courseid' => $vCourseId);
+
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction1&wstoken=$wstoken";
+
+    $curl = new curl;
+
+    $resp = $curl->post($server_url, $params);
+    $arrModuleStatus = json_decode($resp, true);
+
+    //print_r($arrModuleStatus);
+
+    //get module name & details
+
+    $wsfunction2 = 'core_course_get_contents';
+    $params = array('courseid' => $vCourseId);
+    $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction2&wstoken=$wstoken";
+
+    $curl = new curl;
+    $resp = $curl->post($server_url, $params);
+    $arrOutput = json_decode($resp, true);
+
+    $arrModules = $arrOutput[0]['modules'];
+
+    $count = 0;
+    foreach ($arrOutput as $topic) {
+
+        $arrModules = $topic['modules'];
+        foreach ($arrModules as $module) {
+            $arrResults['Data'][$count]['id'] = $count;
+            $arrResults['Data'][$count]['modid'] = $module[id];
+            $arrResults['Data'][$count]['name'] = $module[name];
+            $arrResults['Data'][$count]['modname'] = $module[modname];
+            if ($module['completiondata']['timecompleted'] > 0) {
+                $vStatus = 'Completed';
+            } else {
+                $vStatus = 'Not Completed';
+            }
+            $arrResults['Data'][$count]['status'] = $vStatus;
+            $count++;
+        }
+
+    }
+
+    return $arrResults;
+
+}
+
+function getadminDashStats()
+{
+    global $DB, $CFG;
+
+    if (isset($_POST["wstoken"])) {
+
+        $q1 = "SELECT count(id) as coursesCount FROM {$CFG->prefix}course where id > 1 and visible=1";
+        $courses = $DB->get_record_sql($q1);
+
+        $q2 = "SELECT count(id) as usersCount FROM {$CFG->prefix}user where id > 2 and deleted=0";
+        $users = $DB->get_record_sql($q2);
+        
+        $arrResults['Data']['usersCount'] = $users->userscount;
+        $arrResults['Data']['coursesCount'] = $courses->coursescount;
+        
+
     }
 
     return $arrResults;
