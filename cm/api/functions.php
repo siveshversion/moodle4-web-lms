@@ -1036,10 +1036,216 @@ function getadminDashStats()
         $q2 = "SELECT count(id) as usersCount FROM {$CFG->prefix}user where id > 2 and deleted=0";
         $users = $DB->get_record_sql($q2);
 
+        $q3 = "SELECT count(id) as lpscount FROM {$CFG->prefix}cm_admin_learning_path";
+        $lps = $DB->get_record_sql($q3);
+
         $arrResults['Data']['usersCount'] = $users->userscount;
         $arrResults['Data']['coursesCount'] = $courses->coursescount;
+        $arrResults['Data']['lpsCount'] = $lps->lpscount;
 
     }
 
+    return $arrResults;
+}
+
+function createLP()
+{
+    global $DB, $CFG;
+
+    if (isset($_POST["lp_name"])) {
+        $LP = new stdClass();
+        $LP->lpname = $_POST['lp_name'];
+        $LP->lpdesc = $_POST['lp_description'];
+        $LP->points = $_POST['lp_credit'];
+        $LP->lpdays = $_POST['lp_days'];
+        $LP->threshold = $_POST['lp_threshold'];
+        $LP->lpstatus = 'active';
+        $LP->startdate = null;
+        $LP->enddate = null;
+        $LP->lpimage = null;
+        $LP->lastmodified = time();
+        $LP->creator = $_POST['lp_creator_id'];
+        $inserted = insert_lpdetails($LP);
+
+        $arrResults['Data'] = $inserted;
+    }
+    return $arrResults;
+}
+
+function listLP()
+{
+    global $DB;
+    $response = array();
+    if (isset($_POST['userId'])) {
+        $q = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active'";
+        $lps = $DB->get_records_sql($q);
+        foreach ($lps as $rec) {
+            $new_data = new stdClass();
+            $new_data->lp_name = $rec->lpname;
+            $new_data->lp_bu = 'Learnospace';
+            $new_data->lp_id = $rec->id;
+            $new_data->lp_courses_cnt = getLPCourseCnt($rec->id);
+            $new_data->lp_users_cnt = '';
+            $new_data->lp_threshold = $rec->threshold;
+            $new_data->lp_status = $rec->lpstatus;
+            $new_data->lp_days = $rec->lpdays;
+            $response[] = $new_data;
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function get_lp_by_id()
+{
+    global $DB;
+
+    $response = new stdClass();
+
+    if (isset($_POST['lp_id'])) {
+        $lp_id = $_POST['lp_id'];
+
+        $sql = "select * from mdl_cm_admin_learning_path where id='$lp_id'";
+        $rec = $DB->get_record_sql($sql);
+
+        $response->name = $rec->lpname;
+        $response->description = strip_tags($rec->lpdesc);
+        $response->lp_days = $rec->lpdays;
+        $response->lp_threshold = $rec->threshold;
+        $response->lp_status = $rec->lpstatus;
+        $response->lp_credit = $rec->points;
+
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function update_lp()
+{
+    global $DB, $CFG;
+
+    if (isset($_POST["lp_name"])) {
+        $LP = new stdClass();
+        $LP->id = $_POST['lp_id'];
+        $LP->lpname = $_POST['lp_name'];
+        $LP->lpdesc = $_POST['lp_description'];
+        $LP->points = $_POST['lp_credit'];
+        $LP->lpdays = $_POST['lp_days'];
+        $LP->threshold = $_POST['lp_threshold'];
+        $LP->lpstatus = 'active';
+        $LP->startdate = null;
+        $LP->enddate = null;
+        $LP->lpimage = null;
+        $LP->lastmodified = time();
+        $LP->creator = $_POST['lp_creator_id'];
+        $inserted = update_lpdetails($LP);
+
+        $arrResults['Data'] = $inserted;
+    }
+    return $arrResults;
+}
+
+function listLPCourses()
+{
+    global $DB;
+    $response = array();
+    if (isset($_POST['catId'])) {
+        $catId = $_POST['catId'];
+    }
+    $coursefilter = $_POST['assign_status'];
+
+    $categoryFilter = isset($catId) ? "category=$catId" : "category > 0";
+
+    $moodledata = new stdClass();
+    $moodledata->wsfunction = $_POST['wsfunction'];
+    $moodledata->wstoken = $wstoken;
+    $i = 1;
+    $lpid = $_POST['lp_id'];
+    if (isset($lpid)) {
+        $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+        $courses = $DB->get_records_sql($q);
+        foreach ($courses as $rec) {
+            $new_data = new stdClass();
+            $cat = new stdClass();
+            $cat->tablename = 'course_categories';
+            $cat->fieldname = 'name';
+            $cat->recid = 'id';
+            $cat->id = $rec->category;
+            $new_data->course_fullname = $rec->fullname;
+            $new_data->course_shortname = $rec->shortname;
+            $new_data->sl_no = $i;
+            $category = get_field_by_id($cat);
+            $new_data->category_id = $category->id;
+            $new_data->category_name = $category->name;
+            $new_data->course_id = $rec->id;
+            $new_data->assigned = getAssignedLPCourses($rec->id,$lpid);
+            if($coursefilter == 'all')
+            {
+                $response[] = $new_data;
+                $i++;
+            } else if(($coursefilter == 'assigned') && ($new_data->assigned) ){
+                $response[] = $new_data;
+                $i++;
+            } else if(($coursefilter == 'not_assigned') && (!$new_data->assigned) ){
+                $response[] = $new_data;
+                $i++;
+            }  
+           
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function getLPCourseCnt($lpid){
+    global $DB, $CFG;
+    $q = "SELECT count(id) as lpcoursecnt FROM `mdl_cm_lp_course` where lp_id= $lpid";
+    $lp = $DB->get_record_sql($q);
+        return $lp->lpcoursecnt;
+}
+
+function getAssignedLPCourses($cid,$lpid)
+{
+    global $DB, $CFG;
+
+    $q = "SELECT id as assigned FROM `mdl_cm_lp_course` where lp_courseid= $cid and lp_id= $lpid";
+    $lp = $DB->get_record_sql($q);
+
+    if ($lp) {
+        return true;
+    }
+
+    return false;
+}
+
+function AddLPCourse()
+{
+    global $DB, $CFG;
+    if (isset($_POST['lp_id'])) {
+        $coursedid = new stdClass();
+        $coursedid->lp_id = $_POST['lp_id'];
+        $coursedid->lp_type = '1';
+        $coursedid->creator = $_POST['userId'];
+        $coursedid->timecreated = time();
+        $coursedid->lp_courseid = $_POST['course_id'];
+        $coursedid->status = 1;
+        $instcid = $DB->insert_record('cm_lp_course', $coursedid);
+    }
+    $arrResults['Data']['lpc_id'] = $instcid;
+    return $arrResults;
+}
+
+
+function removeLPCourse()
+{
+    global $DB, $CFG;
+
+    if (isset($_POST['lp_id'])){
+        $vLPId = $_POST['lp_id'];
+        $vCourseId = $_POST['course_id'];
+        $done =$DB->delete_records('cm_lp_course',array('lp_id'=>$vLPId,"lp_courseid"=>$vCourseId));
+    }
+
+    $arrResults['Data']['done'] = $done;
     return $arrResults;
 }

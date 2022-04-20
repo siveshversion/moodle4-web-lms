@@ -1,0 +1,400 @@
+/* senthamizh selvi 
+Date : 18.2.2020
+
+*/
+
+.cusTable th{
+border-bottom:1px solid #cccccc;
+border-top:1px solid #cccccc;
+padding:10px 5px 10px 5px;	
+color:#2394f2;
+}
+.cusLink{
+color:#2394f2;	
+}
+.cusTable td{
+border-top:1px solid #cccccc;
+padding:10px 5px 10px 5px;	
+}
+
+
+.btn-primary {
+color: #fff;
+background-color: #2394f2;
+border-color: #2394f2;
+}
+
+.col {
+  padding: 20px 16px !important;
+  text-align: center;
+}
+
+.card {
+	    margin-bottom: 0px;
+}
+#coustmprogress {
+    height: 9px;
+    overflow: hidden;
+	float:left;
+    width: 90%;
+	border-radius: 0px;
+	box-shadow : none;
+	margin-left: 0px;
+	margin-top: 10px;
+} 
+
+
+.container_1{
+display:table;
+border: 1px solid #ddd;
+box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.2), 0 3px 10px 0 rgba(0, 0, 0, 0.19);
+
+
+width:90%;
+height:100px;
+color:#666666;
+
+}	
+.col1, .col2, .col3 {
+ display:table-cell;
+ padding : 20px 0px 10px 0px;
+ text-align:center;
+}
+
+.container_2{
+display:table;
+background-color:#f2f2f2;
+/*box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);*/
+border-radius:10px;	
+width:90%;
+color:#666666;
+margin:10px 10px 10px 10px;
+height:70px;
+
+}	
+
+.container_3{
+display:table;
+background-color:#f2f2f2;
+/*box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);*/
+border-radius:10px;	
+
+width:90%;
+padding : 10px 10px 10px 10px;
+color:#666666;
+margin:10px 10px 10px 10px;
+height:70px;
+}	
+
+.container_4{
+display:table;
+background-color:#f2f2f2;
+/*box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);*/
+border-radius:10px;	
+width:90%;
+padding : 10px 10px 10px 10px;
+color:#666666;
+margin:10px 10px 10px 10px;
+height:70px;
+}
+
+.container_5{
+display:table;
+background-color:#f2f2f2;
+/*box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);*/
+border-radius:10px;		
+width:90%;
+color:#666666;
+margin:10px 10px 10px 10px;
+height:70px;
+}
+
+.leaderboard_list{
+display:table;
+/*background-color:#f2f2f2;
+border-radius:10px;	*/
+width:80%;
+color:#666666;
+margin:10px 10px 10px 10px;
+}
+
+.second_col1, .second_col2, .second_col3 {
+ display:table-cell;
+ padding : 15px 10px 10px 10px; 
+}
+
+.second_col1{
+	text-align:left;
+}
+.second_col3{
+	text-align:right;
+	padding-right:20px;
+}
+
+
+.leaderboard_col1, .leaderboard_col2, .leaderboard_col3 {
+ display:table-cell;
+ padding : 10px 10px 10px 5px; 
+ text-align:center;
+}
+
+.leaderboard_col1{
+	text-align:left;
+	color:#666666;
+	text-transform:capitalize;
+	
+}
+
+.leaderboard_col3{
+	text-align:right;
+	color:#666666;
+	padding-right:18px;
+	
+}
+
+.cusHeading{
+	font-size:15px;
+	font-weight:bold;
+	margin:30px 0px 0px 30px;
+	text-align:left;
+border-bottom:5px solid #2393F1;
+	margin:10px 10px 10px 10px;
+
+	
+}
+
+.cusUL{
+	
+ list-style: none;
+}
+
+.sectionHeading{
+	border-bottom:1px solid #cccccc;
+	color:#000;
+	padding:5px 5px 5px 5px;
+
+	text-align:left;
+	font-weight:bold;
+}
+
+.sectionBody	{
+margin-top:	30px;
+}
+
+#courses{
+	position: absolute;
+    top: 143px;
+    left: 57%;
+	font-size:16px;
+	
+    
+}
+
+
+
+#donut_chart{
+	width:100%;
+	float:left;
+
+    
+}
+body {
+	margin-left: 0px;
+	margin-top: 0px;
+	margin-right: 0px;
+	margin-bottom: 0px;
+	font-family:;
+	font-size:13px;
+}
+
+
+#pstylev p {
+		margin :0px;
+	}
+	
+	#coustmprogress {
+    height: 7px;
+    overflow: hidden;
+    float: left;
+    width: 60%;
+	border-radius: 3px;
+   }
+   
+   #example_info {
+		display : none;
+	}
+	a:hover {
+    color: #0b4f8a;
+    text-decoration: none;
+    }
+    .event-list {
+		list-style: none;
+		font-family: 'Lato', sans-serif;
+		margin: 0px;
+		padding: 0px;
+	}
+	.event-list > li {
+		background-color: rgb(255, 255, 255);
+		box-shadow: 0px 0px 5px rgb(51, 51, 51);
+		box-shadow: 0px 0px 5px rgba(51, 51, 51, 0.7);
+		padding: 0px;
+		margin: 0px 0px 20px;
+	}
+	.event-list > li > time {
+		display: inline-block;
+		width: 100%;
+		color: rgb(255, 255, 255);
+		background-color: rgb(197, 44, 102);
+		padding: 5px;
+		text-align: center;
+		text-transform: uppercase;
+		float: right;
+		
+	}
+	
+	.event-list > li > img {
+		width: 100%;
+	}
+	.event-list > li > .info {
+		padding-top: 5px;
+		text-align: center;
+	}
+	.event-list > li > .info > .title {
+		font-size: 13pt;
+		margin: 0px;
+	}
+	.event-list > li > .info > .desc {
+		font-size: 13pt;
+		font-weight: 300;
+		margin: 0px;
+	}
+	.event-list > li > .info > ul,
+	.event-list > li > .social > ul {
+		display: table;
+		list-style: none;
+		padding: 0px;
+		width: 100%;
+		
+	}
+	.event-list > li > .social > ul {
+		margin: 0px;
+	}
+	.event-list > li > .info > ul > li,
+	.event-list > li > .social > ul > li {
+		
+		cursor: pointer;
+		color: rgb(144, 137, 137);
+		font-size: 11pt;
+        padding: 3px 10px;
+	}
+    .event-list > li > .info > ul > li > a {
+		display: block;
+		width: 100%;
+		color: rgb(30, 30, 30);
+		text-decoration: none;
+	} 
+    .event-list > li > .social > ul > li {    
+        padding: 0px;
+    }
+    .event-list > li > .social > ul > li > a {
+        padding: 3px 7px;
+		margin-bottom: 3px;
+	} 
+	.event-list > li > .info > ul > li:hover,
+	.event-list > li > .social > ul > li:hover {
+		color: rgb(30, 30, 30);
+	}
+	.facebook a
+	 {
+		display: block;
+		color: rgb(75, 110, 168) !important;
+		background-color: rgb(75, 110, 168) !important;
+	}
+	
+	.facebook:hover a {
+		color: rgb(255, 255, 255) !important;
+		background-color: rgb(75, 110, 168) !important;
+	}
+	
+
+	@media (min-width: 768px) {
+		.event-list > li {
+			position: relative;
+			display: block;
+			width: 100%;
+			height: 130px;
+			padding: 0px;
+			padding-top: 10px
+		}
+		.event-list > li > time,
+		.event-list > li > img  {
+			display: inline-block;
+		}
+		.event-list > li > time,
+		.event-list > li > img {
+			width: 120px;
+			float: left;
+		}
+		.event-list > li > .info {
+			background-color: #FFFFFF;
+			overflow: hidden;
+		}
+		.event-list > li > time,
+		.event-list > li > img {
+			padding: 0px;
+			margin: 0px 20px 6px 6px;
+		}
+		.event-list > li > .info {
+			position: relative;
+			height: 80px;
+			text-align: left;
+			padding-right: 40px;
+		}	
+		.event-list > li > .info > .title, 
+		.event-list > li > .info > .desc {
+			
+		}
+		.event-list > li > .info > ul {
+			
+		}
+		.event-list > li > .social {
+			position: absolute;
+			top: 3px;
+			right: 0px;
+			display: block;
+			width: 70px;
+		}
+        .event-list > li > .social > ul {
+          
+        }
+		.event-list > li > .social > ul > li {			
+			display: block;
+            padding: 0px;
+		}
+		.event-list > li > .social > ul > li > a {
+		border-radius : 3px;
+		}
+	}
+
+	
+	.tab-pane {
+		    margin-top: 20px;
+	}
+
+.block_myoverview   {
+	display : none;
+}
+
+.block_recentlyaccessedcourses {
+	
+	display : none ;
+}
+
+#page-header {
+display :none;
+
+}
+
+#region-main-box {
+	margin-top : 20px;
+}

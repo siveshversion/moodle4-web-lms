@@ -2324,3 +2324,36 @@ $string['icqnumber'] = 'ICQ number';
 $string['msnid'] = 'MSN ID';
 $string['coursepreferences'] = 'Course preferences';
 $string['registrationno'] = 'No, I do not wish to receive any emails';
+
+
+//custom strings
+
+$string['c_lp_delete_confirmation'] = 'If you delete the learning path all the data linked to path will get deleted, are you sure to delete ?';
+$string['c_lp_creation'] = 'Learning plan Creation';
+$string['c_lp_namealreadyexist'] = 'Learning Plan Name Already Exists';
+$string['c_lp_namemust'] = 'Must enter the learning Plan name';
+$string['c_lp_coursemust'] = 'Must select the courses';
+$string['c_lp_imagemust'] = 'Must required learning Plan image file';
+$string['c_lp_addimge'] = 'Add image to the learning Plan';
+$string['c_lp_filetypemsg'] = 'extension not allowed, please choose a JPEG or PNG file';
+$string['c_lp_filesizemsg'] = 'File size must be in less then 1 MB';
+$string['c_lp_alreadyexist'] = 'Learning Plan already exist';
+$string['c_lp_name'] = 'Name';
+$string['c_lp_creditpoints'] = 'Credit Points';
+$string['c_lp_noofdayscomple'] = 'No of days to completed';
+$string['c_lp_img'] = 'Learning Path image';
+$string['c_lp_uploadfileformat'] = 'Upload file format only';
+$string['c_lp_dotjpg'] = '.jpg';
+$string['c_lp_dotpng'] = '.png';
+$string['c_lp_or'] = 'or';
+$string['c_lp_update'] = 'Update';
+$string['c_lp_submit'] = 'Submit';
+$string['c_details'] = 'Details';
+$string['c_lp_plantype'] = 'Plan Type ';
+$string['c_lp_enddate'] = 'End day ';
+$string['c_lp_credits'] = 'Credits';
+$string['c_lp_assigned'] = 'Assigned';
+$string['c_learningplan'] = 'Learning Plan';
+$string['c_lplist'] = 'Learning Path List';
+$string['c_description'] = 'Description';
+$string['c_lp_noofdayscomple1'] = 'No. of days to complete';

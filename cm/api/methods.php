@@ -12,6 +12,10 @@ include_once '../../config.php';
 include_once './functions.php';
 require_once "./curl.php";
 
+global $CFG;
+
+require_once $CFG->dirroot . '/cm/lib/cmlib.php';
+
 error_reporting(E_ALL);
 
 if (isset($_GET['methodname'])) {
