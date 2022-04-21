@@ -36,12 +36,12 @@ function validateLogin($arrInput)
     // $vUsername = 'admin';
     // $vPassword = 'Learn@123';
 
-    $query = "select id from mdl_user where username like BINARY '$vUsername'";
+    $query = "select id from {$CFG->prefix}user where username like BINARY '$vUsername'";
     $vUsernameExits = $DB->get_record_sql($query);
 
     if ($vUsernameExits->id == '') {
 
-        $query = "select id from mdl_user where username like '$vUsername'";
+        $query = "select id from {$CFG->prefix}user where username like '$vUsername'";
         $vUsernameExits = $DB->get_record_sql($query);
     }
 
@@ -95,7 +95,7 @@ function validateLogin($arrInput)
             } else {
                 //check whether the user has the student role
                 $vLearners = 0;
-                $query = "SELECT id FROM mdl_role_assignments WHERE roleid = 5
+                $query = "SELECT id FROM {$CFG->prefix}role_assignments WHERE roleid = 5
                             and userid = $objUser->id group by roleid";
                 $objInstructorsRoles = $DB->get_records_sql($query);
 
@@ -131,18 +131,18 @@ function validateLogin($arrInput)
 
 function getUserList()
 {
-    global $DB;
+    global $DB, $CFG;
 
     if (isset($_POST["wstoken"])) {
 
-        $q1 = "select value from mdl_config where name='siteadmins'";
+        $q1 = "select value from {$CFG->prefix}config where name='siteadmins'";
 
         $siteadmins_rec = $DB->get_record_sql($q1);
 
         $siteadmins = $siteadmins_rec->value;
 
         $q = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
-             from mdl_user u where u.deleted = 0 and u.id > 1 and
+             from {$CFG->prefix}user u where u.deleted = 0 and u.id > 1 and
              u.id NOT IN($siteadmins)";
 
         $res = $DB->get_records_sql($q);
@@ -166,7 +166,7 @@ function getUserList()
 
 function already_taken_validator()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = new stdClass();
     $not_in_query_param = null;
     $second_query_param = null;
@@ -254,7 +254,7 @@ function addNewUser()
 
 function getUser()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
 
     // $_POST["user_id"] = 5;
@@ -262,7 +262,7 @@ function getUser()
     if (isset($_POST["user_id"])) {
 
         $user_id = $_POST["user_id"];
-        $sql = "select * from mdl_user where id = $user_id";
+        $sql = "select * from {$CFG->prefix}user where id = $user_id";
         $res1 = $DB->get_records_sql($sql);
 
         foreach ($res1 as $rec) {
@@ -368,7 +368,7 @@ function suspendUser()
 
 function listCategories()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
     if (isset($_POST['userId'])) {
         $q = "SELECT * FROM {course_categories} where visible=1 and id > 1";
@@ -387,7 +387,7 @@ function listCategories()
 
 function get_course_cnt_by_cat($cat_id)
 {
-    global $DB;
+    global $DB, $CFG;
     $cnt_cid = null;
     $sql = "SELECT count(id) as cnt_cid FROM {course} WHERE category='$cat_id'";
     $rec = $DB->get_record_sql($sql);
@@ -438,14 +438,14 @@ function createCategory()
 
 function get_category_by_id()
 {
-    global $DB;
+    global $DB, $CFG;
 
     $response = new stdClass();
 
     if (isset($_POST['cat_id'])) {
         $cat_id = $_POST['cat_id'];
 
-        $sql = "select * from mdl_course_categories where id='$cat_id'";
+        $sql = "select * from {$CFG->prefix}course_categories where id='$cat_id'";
         $rec = $DB->get_record_sql($sql);
 
         $response->name = $rec->name;
@@ -495,7 +495,7 @@ function updateCategory()
 
 function listCourses()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
     if (isset($_POST['catId'])) {
         $catId = $_POST['catId'];
@@ -689,7 +689,7 @@ function update_course()
 
 function getCourseUsers()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
 
     $course_id = $_POST['course_id'];
@@ -704,7 +704,7 @@ function getCourseUsers()
 
     $enrolled_userids_arr = getEnrolledUsers($course_id, $moodledata);
 
-    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM `mdl_user` where deleted = 0 and username not in('guest','admin')";
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin')";
     $res = $DB->get_records_sql($sql);
     $i = 1;
     foreach ($res as $rec) {
@@ -766,7 +766,7 @@ function enrollUserToCourse()
 
         $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
-        $sql = "Select id from mdl_course_categories where id in(select category from mdl_course where id = '$course_id')";
+        $sql = "Select id from {$CFG->prefix}course_categories where id in(select category from {$CFG->prefix}course where id = '$course_id')";
         $rec = $DB->get_record_sql($sql);
         $response->cat_id = $rec->id;
 
@@ -836,7 +836,7 @@ function getMyEnrolledCourses($arrInput)
     $wstoken = $_POST['wstoken'];
 
     //get total course count
-    $vTotalCoursesCount = $DB->count_records_sql("SELECT count(*) as total_courses FROM `mdl_course` WHERE id > 1 and visible = 1");
+    $vTotalCoursesCount = $DB->count_records_sql("SELECT count(*) as total_courses FROM {$CFG->prefix}course WHERE id > 1 and visible = 1");
 
     $params = array('userid' => $vUserId);
     $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
@@ -1074,7 +1074,7 @@ function createLP()
 
 function listLP()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
     if (isset($_POST['userId'])) {
         $q = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active'";
@@ -1098,14 +1098,14 @@ function listLP()
 
 function get_lp_by_id()
 {
-    global $DB;
+    global $DB, $CFG;
 
     $response = new stdClass();
 
     if (isset($_POST['lp_id'])) {
         $lp_id = $_POST['lp_id'];
 
-        $sql = "select * from mdl_cm_admin_learning_path where id='$lp_id'";
+        $sql = "select * from {$CFG->prefix}cm_admin_learning_path where id='$lp_id'";
         $rec = $DB->get_record_sql($sql);
 
         $response->name = $rec->lpname;
@@ -1147,7 +1147,7 @@ function update_lp()
 
 function listLPCourses()
 {
-    global $DB;
+    global $DB, $CFG;
     $response = array();
     if (isset($_POST['catId'])) {
         $catId = $_POST['catId'];
@@ -1178,37 +1178,37 @@ function listLPCourses()
             $new_data->category_id = $category->id;
             $new_data->category_name = $category->name;
             $new_data->course_id = $rec->id;
-            $new_data->assigned = getAssignedLPCourses($rec->id,$lpid);
-            if($coursefilter == 'all')
-            {
+            $new_data->assigned = getAssignedLPCourses($rec->id, $lpid);
+            if ($coursefilter == 'all') {
                 $response[] = $new_data;
                 $i++;
-            } else if(($coursefilter == 'assigned') && ($new_data->assigned) ){
+            } else if (($coursefilter == 'assigned') && ($new_data->assigned)) {
                 $response[] = $new_data;
                 $i++;
-            } else if(($coursefilter == 'not_assigned') && (!$new_data->assigned) ){
+            } else if (($coursefilter == 'not_assigned') && (!$new_data->assigned)) {
                 $response[] = $new_data;
                 $i++;
-            }  
-           
+            }
+
         }
         $arrResults['Data'] = $response;
     }
     return $arrResults;
 }
 
-function getLPCourseCnt($lpid){
+function getLPCourseCnt($lpid)
+{
     global $DB, $CFG;
-    $q = "SELECT count(id) as lpcoursecnt FROM `mdl_cm_lp_course` where lp_id= $lpid";
+    $q = "SELECT count(id) as lpcoursecnt FROM {$CFG->prefix}cm_lp_course where lp_id= $lpid";
     $lp = $DB->get_record_sql($q);
-        return $lp->lpcoursecnt;
+    return $lp->lpcoursecnt;
 }
 
-function getAssignedLPCourses($cid,$lpid)
+function getAssignedLPCourses($cid, $lpid)
 {
     global $DB, $CFG;
 
-    $q = "SELECT id as assigned FROM `mdl_cm_lp_course` where lp_courseid= $cid and lp_id= $lpid";
+    $q = "SELECT id as assigned FROM {$CFG->prefix}cm_lp_course where lp_courseid= $cid and lp_id= $lpid";
     $lp = $DB->get_record_sql($q);
 
     if ($lp) {
@@ -1235,17 +1235,57 @@ function AddLPCourse()
     return $arrResults;
 }
 
-
 function removeLPCourse()
 {
     global $DB, $CFG;
 
-    if (isset($_POST['lp_id'])){
+    if (isset($_POST['lp_id'])) {
         $vLPId = $_POST['lp_id'];
         $vCourseId = $_POST['course_id'];
-        $done =$DB->delete_records('cm_lp_course',array('lp_id'=>$vLPId,"lp_courseid"=>$vCourseId));
+        $done = $DB->delete_records('cm_lp_course', array('lp_id' => $vLPId, "lp_courseid" => $vCourseId));
     }
 
     $arrResults['Data']['done'] = $done;
     return $arrResults;
+}
+
+function getLPDetails()
+{
+    global $CFG, $DB;
+    $lpId = $_POST['lp_id'];
+    if ($lpId) {
+        $q = "SELECT * FROM  {$CFG->prefix}cm_admin_learning_path where id= $lpId ";
+        $lp = $DB->get_record_sql($q);
+
+        $arrResults['Data']['name'] = $lp->lpname;
+        $arrResults['Data']['desc'] = $lp->lpdesc;
+        $arrResults['Data']['points'] = $lp->points;
+        $arrResults['Data']['days'] = $lp->lpdays;
+        $arrResults['Data']['id'] = $lp->id;
+        $arrResults['Data']['coursecnt'] = getLPCourseCnt($lpId);
+        $arrResults['Data']['coursesarr'] = getLPCoursesArr($lpId);
+        $arrResults['Data']['image'] = $CFG->wwwroot . '/cm/lp/lpimages/istockphoto.jpg';
+    }
+    return $arrResults;
+}
+
+function getLPCoursesArr($lpId)
+{
+    global $DB, $CFG;
+
+    $q = "SELECT lp_courseid as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpId";
+    $cids = $DB->get_records_sql($q);
+
+    $courses = array();
+
+    foreach($cids as $course)
+    {
+        $q1 = "SELECT id,fullname FROM {$CFG->prefix}course where id = $course->cid and visible=1";
+        $rec = $DB->get_record_sql($q1);
+        $result = new stdClass();
+        $result->id = $rec->id;
+        $result->fullname = $rec->fullname;
+        $courses[]= $result;
+    }
+    return $courses;
 }
