@@ -1278,14 +1278,185 @@ function getLPCoursesArr($lpId)
 
     $courses = array();
 
-    foreach($cids as $course)
-    {
+    foreach ($cids as $course) {
         $q1 = "SELECT id,fullname FROM {$CFG->prefix}course where id = $course->cid and visible=1";
         $rec = $DB->get_record_sql($q1);
         $result = new stdClass();
         $result->id = $rec->id;
         $result->fullname = $rec->fullname;
-        $courses[]= $result;
+        $courses[] = $result;
     }
     return $courses;
+}
+
+function getLPUsers()
+{
+    global $DB, $CFG;
+    $response = array();
+
+    $lp_id = $_POST['lp_id'];
+    $assign_status = $_POST['assign_status'];
+
+    $assigned_userids_arr = getLPAssignedUsers($lp_id);
+
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin')";
+    $res = $DB->get_records_sql($sql);
+    $i = 1;
+    foreach ($res as $rec) {
+        $new_data = new stdClass();
+        $new_data->sl_no = $i;
+        $new_data->user_name = $rec->username;
+        $new_data->user_fullname = $rec->fullname;
+        $new_data->user_id = $rec->id;
+        $new_data->assigned = in_array($rec->id, $assigned_userids_arr) ? true : false;
+
+        if ($assign_status == 'all') {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->assigned == false) && ($assign_status == 'not_assigned')) {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->assigned == true) && ($assign_status == 'assigned')) {
+            $i++;
+            $response[] = $new_data;
+        }
+    }
+    $arrResults['Data'] = $response;
+    return $arrResults;
+}
+
+function getLPAssignedUsers($lpId)
+{
+    global $DB, $CFG;
+    $useridsarr = array();
+    $q = "SELECT userid FROM {$CFG->prefix}cm_lp_assignment where lp_id= $lpId";
+    $res = $DB->get_records_sql($q);
+    foreach ($res as $rec) {
+        $useridsarr[] = $rec->userid;
+    }
+
+    return $useridsarr;
+}
+
+function assignLpUser()
+{
+    global $DB, $CFG;
+
+    $lp_id = $_POST['lp_id'];
+    $user_id = $_POST['user_id'];
+    $creator_id = $_POST['creatorId'];
+
+    $arrResults = array();
+
+    $status = 0;
+
+    $courseids = $DB->get_records_sql("select lp_courseid as courseid, ctype from {cm_lp_course} where lp_id = $lp_id");
+    if (!empty($courseids)) {
+        $lpuser = new stdClass();
+        $lpuser->lp_id = $lp_id;
+        $lpuser->lp_type = '1';
+        $lpuser->userid = $user_id;
+        $lpuser->timecreated = time();
+        $lpuser->status = 1;
+
+        foreach ($courseids as $ck => $course) {
+            $lpuser->courseid = $course->courseid;
+            $lpuser->ctype = $course->ctype;
+            $lpuser->goal_start_date = date("d-m-Y");
+            $lpuser->goal_end_date = $endday;
+            $insertedid = $DB->insert_record('cm_lp_assignment', $lpuser);
+
+            if (!empty($course->courseid)) {
+
+                $enrolid = $DB->get_record_sql("select id from {enrol} where courseid =$course->courseid and enrol='manual' and status =0");
+                if (!empty($enrolid->id)) {
+                    if (!$DB->record_exists('user_enrolments', array('enrolid' => $enrolid->id, 'userid' => $user_id))) {
+                        $usrenrol = new stdClass();
+                        $usrenrol->status = "0";
+                        $usrenrol->enrolid = $enrolid->id;
+                        $usrenrol->userid = $user_id;
+                        $usrenrol->timestart = time();
+                        $usrenrol->timeend = "0";
+                        $usrenrol->modifierid = $creator_id;
+                        $usrenrol->timecreated = time();
+                        $usrenrol->timemodified = time();
+                        $DB->insert_record('user_enrolments', $usrenrol);
+
+                        $arrResults['Data']['status'] = 1;
+                        //echo "enrol user"; exit;
+                    }
+
+                    $sql_context = $DB->get_record_sql("SELECT id from {context} where instanceid = $course->courseid and contextlevel = 50");
+                    if (!empty($sql_context->id)) {
+                        if (!$DB->record_exists('role_assignments', array('contextid' => $sql_context->id, 'userid' => $user_id, 'roleid' => 5))) {
+                            $contextid = $sql_context->id;
+                            $groupmodify = new stdClass();
+                            $groupmodify->roleid = 5;
+                            $groupmodify->contextid = $contextid;
+                            $groupmodify->userid = $user_id;
+                            $groupmodify->timemodified = time();
+                            $groupmodify->modifierid = $creator_id;
+                            $groupmodify->component = "0";
+                            $groupmodify->itemid = "0";
+                            $groupmodify->sortorder = "0";
+                            $inserted = $DB->insert_record('role_assignments', $groupmodify);
+                            //echo "role user"; exit;
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
+    return $arrResults;
+}
+
+function UnassignLpUser()
+{
+    global $DB, $CFG;
+
+    $lp_id = $_POST['lp_id'];
+    $user_id = $_POST['user_id'];
+    $creator_id = $_POST['creatorId'];
+
+    if ($lp_id) {
+        $res = $DB->delete_records('cm_lp_assignment', array('lp_id' => $lp_id, 'userid' => $user_id));
+        $courseid = $DB->get_records_sql("select lp_courseid as courseid from {cm_lp_course} where lp_id = $lp_id");
+        foreach ($courseid as $ck => $course) {
+
+            $q1="select enrolid from {user_enrolments} where userid = $user_id and status = 0";
+            $enrollments = $DB->get_records_sql($q1);
+
+            foreach ($enrollments as $rec)
+            {
+                $enroll[] = $rec->enrolid;
+            }
+            $enrol_ids = implode(',', $enroll);
+
+            $sql = $DB->get_record_sql("select id from {enrol} where id in ($enrol_ids) and courseid = $course->courseid and  enrol = 'manual'");
+            $enrolid = $sql->id;
+
+            if (!empty($enrolid)) {
+                $DB->delete_records('user_enrolments', array('userid' => $user_id, 'enrolid' => $enrolid));
+            }
+            $sql_context = $DB->get_record_sql("SELECT id from {$CFG->prefix}context where instanceid = $course->courseid and contextlevel = 50");
+            $contextid = $sql_context->id;
+            if (!empty($contextid)) {
+                $DB->delete_records('role_assignments', array('contextid' => $contextid, 'userid' => $user_id, 'roleid' => 5));
+            }
+        }
+
+        $ccount = $DB->get_record_sql("select count(*) as cnt from {cm_admin_learning_path} where id=$lp_id");
+        $masterupdate = new stdClass();
+        $masterupdate->id = $lp_id;
+        $masterupdate->usercnt = $ccount->cnt;
+        $masterupdate->lastmodified = time();
+        $masterupdate->modifier = $creator_id;
+        $updateid = $DB->update_record('cm_admin_learning_path', $masterupdate);
+
+        $arrResults['Data'] = 1;
+    }
+
+    return $arrResults;
 }
