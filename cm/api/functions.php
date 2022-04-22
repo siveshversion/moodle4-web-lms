@@ -1085,7 +1085,7 @@ function listLP()
             $new_data->lp_bu = 'Learnospace';
             $new_data->lp_id = $rec->id;
             $new_data->lp_courses_cnt = getLPCourseCnt($rec->id);
-            $new_data->lp_users_cnt = '';
+            $new_data->lp_users_cnt = LpUserscnt($rec->id);
             $new_data->lp_threshold = $rec->threshold;
             $new_data->lp_status = $rec->lpstatus;
             $new_data->lp_days = $rec->lpdays;
@@ -1425,11 +1425,10 @@ function UnassignLpUser()
         $courseid = $DB->get_records_sql("select lp_courseid as courseid from {cm_lp_course} where lp_id = $lp_id");
         foreach ($courseid as $ck => $course) {
 
-            $q1="select enrolid from {user_enrolments} where userid = $user_id and status = 0";
+            $q1 = "select enrolid from {user_enrolments} where userid = $user_id and status = 0";
             $enrollments = $DB->get_records_sql($q1);
 
-            foreach ($enrollments as $rec)
-            {
+            foreach ($enrollments as $rec) {
                 $enroll[] = $rec->enrolid;
             }
             $enrol_ids = implode(',', $enroll);
@@ -1459,4 +1458,18 @@ function UnassignLpUser()
     }
 
     return $arrResults;
+}
+
+function LpUserscnt($lpId)
+{
+    global $DB, $CFG;
+    $usercnt = 0;
+
+    $q = "SELECT count(Distinct(userid)) as userscnt from {$CFG->prefix}cm_lp_assignment where lp_id=$lpId";
+    $rec = $DB->get_record_sql($q);
+
+    if (!empty($rec->userscnt)) {
+        $usercnt = $rec->userscnt;
+    }
+    return $usercnt;
 }
