@@ -1473,3 +1473,33 @@ function LpUserscnt($lpId)
     }
     return $usercnt;
 }
+
+function getMyEnrolledLPs()
+{
+    global $DB, $CFG;
+    $user_id = $_POST['userid'];
+
+    if (!empty($user_id)) {
+        $q = "SELECT Distinct(lp_id) as lpid FROM {$CFG->prefix}cm_lp_assignment where userid= $user_id";
+        $res = $DB->get_records_sql($q);
+        foreach ($res as $rec) {
+            $lpidsarr[] = $rec->lpid;
+        }
+        $lpids = implode(',', $lpidsarr);
+    }
+
+    if (!empty($lpids)) {
+        $q1 = "SELECT * FROM {$CFG->prefix}cm_admin_learning_path where id in($lpids)";
+        $lp_res = $DB->get_records_sql($q1);
+        foreach ($lp_res as $rec) {
+            $new_data = new stdClass();
+            $new_data->id = $rec->id;
+            $new_data->lpname = $rec->lpname;
+            $new_data->progress = 0;
+            $new_data->imgUrl = $CFG->wwwroot . '/cm/lp/lpimages/istockphoto.jpg';
+            $LP[] = $new_data;
+        }
+        $arrResults['Data'] = $LP;
+    }
+    return $arrResults;
+}
