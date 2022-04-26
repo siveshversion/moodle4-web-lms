@@ -76,7 +76,7 @@ function validateLogin($arrInput)
                 $DB->set_field('user_private_key', 'value', $vMoodleToken, array('userid' => $vUserId, 'script' => 'auth/userkey'));
             } else {
 
-                $objUserAuth = new stdclass();
+                $objUserAuth = new stdClass();
                 $objUserAuth->script = 'auth/userkey';
                 $objUserAuth->value = $vMoodleToken;
                 $objUserAuth->userid = $vUserId;
@@ -1039,9 +1039,13 @@ function getadminDashStats()
         $q3 = "SELECT count(id) as lpscount FROM {$CFG->prefix}cm_admin_learning_path";
         $lps = $DB->get_record_sql($q3);
 
+        $q4 = "SELECT count(id) as buscount FROM {$CFG->prefix}cm_business_units";
+        $bus = $DB->get_record_sql($q4);
+
         $arrResults['Data']['usersCount'] = $users->userscount;
         $arrResults['Data']['coursesCount'] = $courses->coursescount;
         $arrResults['Data']['lpsCount'] = $lps->lpscount;
+        $arrResults['Data']['busCount'] = $bus->buscount;
 
     }
 
@@ -1501,5 +1505,71 @@ function getMyEnrolledLPs()
         }
         $arrResults['Data'] = $LP;
     }
+    return $arrResults;
+}
+
+function createBU()
+{
+    global $DB, $CFG;
+    $bu_name = $_POST['bu_name'];
+    $arrResults = array();
+    if ($bu_name) {
+        $BU = new stdClass;
+        $BU->bu_name = $bu_name;
+        $BU->parent = 1;
+        $BU->sortorder = 0;
+        $arrResults['Data'] = $DB->insert_record('cm_business_units', $BU);
+    }
+    return $arrResults;
+}
+
+function get_bu_by_id()
+{
+    global $DB, $CFG;
+    $bu_id = $_POST['bu_id'];
+    $arrResults = array();
+    if ($bu_id) {
+        $q = "Select * from {$CFG->prefix}cm_business_units where id= $bu_id";
+        $rec = $DB->get_record_sql($q);
+        $response = new stdClass();
+        $response->buname = $rec->bu_name;
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function update_bu()
+{
+    global $DB, $CFG;
+    $bu_name = $_POST["bu_name"];
+    $bu_id = $_POST["bu_id"];
+    if (isset($bu_id)) {
+        $BU->id = $bu_id;
+        $BU->bu_name = $bu_name;
+        $BU->sortorder = 0;
+        $BU->parent = 1;
+        $inserted = $DB->update_record('cm_business_units', $BU);
+        $arrResults['Data'] = $inserted;
+    }
+    return $arrResults;
+}
+
+function listBU()
+{
+    global $DB, $CFG;
+    $response = array();
+
+    $q = "select * from {cm_business_units}";
+    $lps = $DB->get_records_sql($q);
+    foreach ($lps as $rec) {
+        $new_data = new stdClass();
+        $new_data->bu_name = $rec->bu_name;
+        $new_data->bu_id = $rec->id;
+        $new_data->bu_courses_cnt = 0;
+        $new_data->bu_users_cnt = 0;
+        $response[] = $new_data;
+    }
+    $arrResults['Data'] = $response;
+
     return $arrResults;
 }
