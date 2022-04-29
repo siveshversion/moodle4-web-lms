@@ -155,6 +155,8 @@ function getUserList()
             $data->username = $rec->username;
             $data->firstname = $rec->firstname;
             $data->lastname = $rec->lastname;
+            $BU = getBuByUid($rec->id);
+            $data->buName = $BU->bu_name;
             $data->createdon = (!empty($rec->timecreated)) ? date("d-M-Y", $rec->timecreated) : null;
             $data->lastaccess = (!empty($rec->lastaccess)) ? date("d-M-Y", $rec->lastaccess) : null;
             $data->suspended = $rec->suspended;
@@ -217,6 +219,7 @@ function addNewUser()
         $surname = $_POST['surname'];
         $city_town = $_POST['location'];
         $country = $_POST['country'];
+        $bu_id = $_POST['bu_id'];
     }
     $wsfunction = $_POST['wsfunction'];
     $wstoken = $_POST['wstoken'];
@@ -245,10 +248,16 @@ function addNewUser()
     $params = array('users' => $users);
 
     $curl = new curl();
-    $response = $curl->post($server_url, $params);
+    $curl_response = $curl->post($server_url, $params);
 
-    $arrReturn["Data"] = $response;
+    $arrReturn["Data"] = $curl_response;
 
+    if ((!empty($curl_response)) && (!empty($bu_id))) {
+        $json_arr = json_decode($curl_response, true);
+        foreach ($json_arr as $user) {
+            BUuserEntry($bu_id, $user['id']);
+        }
+    }
     return $arrReturn;
 }
 
@@ -273,6 +282,8 @@ function getUser()
             $data->email = $rec->email;
             $data->city = $rec->city;
             $data->country = $rec->country;
+            $BU = getBuByUid($user_id);
+            $data->bu_id = $BU->id;
             $response[] = $data;
         }
         $arrResults['Data'] = $response;
@@ -285,8 +296,13 @@ function updateUser()
     global $CFG;
     $response = new stdClass();
     $user_id = $_POST["user_id"];
+    $bu_id = $_POST['bu_id'];
     $wsfunction = $_POST['wsfunction'];
     $wstoken = $_POST['wstoken'];
+
+    if ($bu_id) {
+        handleBuEntry($bu_id, $user_id);
+    }
 
     $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
@@ -1565,11 +1581,226 @@ function listBU()
         $new_data = new stdClass();
         $new_data->bu_name = $rec->bu_name;
         $new_data->bu_id = $rec->id;
-        $new_data->bu_courses_cnt = 0;
-        $new_data->bu_users_cnt = 0;
+        $q1 = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$rec->id";
+        $res = $DB->get_record_sql($q1);
+        $q2 = "SELECT count(Distinct(userid)) as usercnt FROM {$CFG->prefix}cm_bu_assignment where bu_id=$rec->id";
+        $rec = $DB->get_record_sql($q2);
+        $new_data->bu_courses_cnt = $res->coursecnt;
+        $new_data->bu_users_cnt = $rec->usercnt;
         $response[] = $new_data;
     }
     $arrResults['Data'] = $response;
 
     return $arrResults;
+}
+
+function listBUCourses()
+{
+    global $DB, $CFG;
+    $response = array();
+    if (isset($_POST['catId'])) {
+        $catId = $_POST['catId'];
+    }
+    $coursefilter = $_POST['assign_status'];
+
+    $categoryFilter = isset($catId) ? "category=$catId" : "category > 0";
+
+    $i = 1;
+    $buid = $_POST['bu_id'];
+    if (isset($buid)) {
+        $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+        $courses = $DB->get_records_sql($q);
+        foreach ($courses as $rec) {
+            $new_data = new stdClass();
+            $cat = new stdClass();
+            $cat->tablename = 'course_categories';
+            $cat->fieldname = 'name';
+            $cat->recid = 'id';
+            $cat->id = $rec->category;
+            $new_data->course_fullname = $rec->fullname;
+            $new_data->course_shortname = $rec->shortname;
+            $new_data->sl_no = $i;
+            $category = get_field_by_id($cat);
+            $new_data->category_id = $category->id;
+            $new_data->category_name = $category->name;
+            $new_data->course_id = $rec->id;
+            $new_data->assigned = getAssignedBUCourses($rec->id, $buid);
+            if ($coursefilter == 'all') {
+                $response[] = $new_data;
+                $i++;
+            } else if (($coursefilter == 'assigned') && ($new_data->assigned)) {
+                $response[] = $new_data;
+                $i++;
+            } else if (($coursefilter == 'not_assigned') && (!$new_data->assigned)) {
+                $response[] = $new_data;
+                $i++;
+            }
+
+        }
+        $arrResults['Data'] = $response;
+    }
+    return $arrResults;
+}
+
+function getAssignedBUCourses($cid, $buid)
+{
+    global $DB, $CFG;
+
+    $q = "SELECT id as assigned FROM {$CFG->prefix}cm_bu_course where bu_courseid= $cid and bu_id= $buid";
+    $bu = $DB->get_record_sql($q);
+
+    if ($bu) {
+        return true;
+    }
+
+    return false;
+}
+
+function AddBUCourse()
+{
+    global $DB, $CFG;
+    if (isset($_POST['bu_id'])) {
+        $coursedid = new stdClass();
+        $coursedid->bu_id = $_POST['bu_id'];
+        $coursedid->creator = $_POST['userId'];
+        $coursedid->timecreated = time();
+        $coursedid->bu_courseid = $_POST['course_id'];
+        $instcid = $DB->insert_record('cm_bu_course', $coursedid);
+    }
+    $arrResults['Data']['buc_id'] = $instcid;
+    return $arrResults;
+}
+
+function removeBUCourse()
+{
+    global $DB, $CFG;
+
+    if (isset($_POST['bu_id'])) {
+        $vLPId = $_POST['bu_id'];
+        $vCourseId = $_POST['course_id'];
+        $done = $DB->delete_records('cm_bu_course', array('bu_id' => $vLPId, "bu_courseid" => $vCourseId));
+    }
+
+    $arrResults['Data']['done'] = $done;
+    return $arrResults;
+}
+
+function getBUUsers()
+{
+    global $DB, $CFG;
+    $response = array();
+
+    $bu_id = $_POST['bu_id'];
+    $assign_status = $_POST['assign_status'];
+
+    $assigned_userids_arr = getBUAssignedUsers($bu_id);
+
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin')";
+    $res = $DB->get_records_sql($sql);
+    $i = 1;
+    foreach ($res as $rec) {
+        $new_data = new stdClass();
+        $new_data->sl_no = $i;
+        $new_data->user_name = $rec->username;
+        $new_data->user_fullname = $rec->fullname;
+        $new_data->user_id = $rec->id;
+        $BU = getBuByUid($rec->id);
+        $new_data->allotted_bu_name = $BU->bu_name;
+        $new_data->allotted_buId = empty($BU->id) ? 0 : $BU->id;
+        $new_data->assigned = in_array($rec->id, $assigned_userids_arr) ? true : false;
+
+        if ($assign_status == 'all') {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->assigned == false) && ($assign_status == 'not_assigned')) {
+            $i++;
+            $response[] = $new_data;
+        } else if (($new_data->assigned == true) && ($assign_status == 'assigned')) {
+            $i++;
+            $response[] = $new_data;
+        }
+    }
+    $arrResults['Data'] = $response;
+    return $arrResults;
+}
+
+function getBuByUid($uId)
+{
+    global $DB, $CFG;
+    $q = "SELECT bu.id,bu.bu_name FROM {$CFG->prefix}cm_business_units as bu join {$CFG->prefix}cm_bu_assignment as bas on bas.bu_id=bu.id where bas.userid=$uId";
+    $req = $DB->get_record_sql($q);
+    return $req;
+}
+
+function getBUAssignedUsers($buId)
+{
+    global $DB, $CFG;
+    $useridsarr = array();
+    $q = "SELECT userid FROM {$CFG->prefix}cm_bu_assignment where bu_id= $buId";
+    $res = $DB->get_records_sql($q);
+    foreach ($res as $rec) {
+        $useridsarr[] = $rec->userid;
+    }
+    return $useridsarr;
+}
+
+function assignBuUser()
+{
+    global $DB, $CFG;
+
+    $bu_id = $_POST['bu_id'];
+    $user_id = $_POST['user_id'];
+
+    $arrResults = array();
+
+    $status = 0;
+
+    if ($bu_id) {
+        $arrResults['Data']['status'] = BUuserEntry($bu_id, $user_id);
+    }
+
+    return $arrResults;
+}
+
+function BUuserEntry($bu_id, $user_id)
+{
+    global $DB;
+    $buuser = new stdClass();
+    $buuser->bu_id = $bu_id;
+    $buuser->userid = $user_id;
+    $buuser->timecreated = time();
+    $insertedid = $DB->insert_record('cm_bu_assignment', $buuser);
+    return $insertedid;
+}
+
+function UnassignBuUser()
+{
+    global $DB, $CFG;
+
+    $bu_id = $_POST['bu_id'];
+    $user_id = $_POST['user_id'];
+
+    if (!empty($bu_id)) {
+        $DB->delete_records('cm_bu_assignment', array('userid' => $user_id, 'bu_id' => $bu_id));
+        $arrResults['Data'] = 1;
+    }
+    return $arrResults;
+}
+
+function handleBuEntry($bu_id, $user_id)
+{
+    global $DB,$CFG;
+    
+    $sql = "select id from {$CFG->prefix}cm_bu_assignment where userid= $user_id";
+    $rec = $DB->get_record_sql($sql);
+    $result = '';
+
+    if (empty($rec->id)) {
+        $result = BUuserEntry($bu_id, $user_id);
+
+    } else {
+        $q = "UPDATE {$CFG->prefix}cm_bu_assignment SET bu_id = ? WHERE userid =?";
+        $result = $DB->execute($q, [$bu_id, $user_id]);
+    }
+    return $result;
 }
