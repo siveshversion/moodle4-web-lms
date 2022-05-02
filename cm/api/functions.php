@@ -1693,31 +1693,39 @@ function getBUUsers()
     $bu_id = $_POST['bu_id'];
     $assign_status = $_POST['assign_status'];
 
-    $assigned_userids_arr = getBUAssignedUsers($bu_id);
+    if (!empty($bu_id)) {
 
-    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin')";
-    $res = $DB->get_records_sql($sql);
-    $i = 1;
-    foreach ($res as $rec) {
-        $new_data = new stdClass();
-        $new_data->sl_no = $i;
-        $new_data->user_name = $rec->username;
-        $new_data->user_fullname = $rec->fullname;
-        $new_data->user_id = $rec->id;
-        $BU = getBuByUid($rec->id);
-        $new_data->allotted_bu_name = $BU->bu_name;
-        $new_data->allotted_buId = empty($BU->id) ? 0 : $BU->id;
-        $new_data->assigned = in_array($rec->id, $assigned_userids_arr) ? true : false;
+        $assigned_userids_arr = getBUAssignedUsers($bu_id);
 
-        if ($assign_status == 'all') {
-            $i++;
-            $response[] = $new_data;
-        } else if (($new_data->assigned == false) && ($assign_status == 'not_assigned')) {
-            $i++;
-            $response[] = $new_data;
-        } else if (($new_data->assigned == true) && ($assign_status == 'assigned')) {
-            $i++;
-            $response[] = $new_data;
+        $userids = implode(',', $assigned_userids_arr);
+
+        $bu_managers_arr = getBUManagers($bu_id);
+
+        if (!empty($userids)) {
+            $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') and id in($userids)";
+            $res = $DB->get_records_sql($sql);
+        }
+        $i = 1;
+        foreach ($res as $rec) {
+            $new_data = new stdClass();
+            $new_data->sl_no = $i;
+            $new_data->user_name = $rec->username;
+            $new_data->user_fullname = $rec->fullname;
+            $new_data->user_id = $rec->id;
+            $BU = getBuByUid($rec->id);
+            $new_data->allotted_bu_name = $BU->bu_name;
+            $new_data->assigned = in_array($rec->id, $bu_managers_arr) ? true : false;
+
+            if ($assign_status == 'all') {
+                $i++;
+                $response[] = $new_data;
+            } else if (($new_data->assigned == false) && ($assign_status == 'not_assigned')) {
+                $i++;
+                $response[] = $new_data;
+            } else if (($new_data->assigned == true) && ($assign_status == 'assigned')) {
+                $i++;
+                $response[] = $new_data;
+            }
         }
     }
     $arrResults['Data'] = $response;
@@ -1744,7 +1752,19 @@ function getBUAssignedUsers($buId)
     return $useridsarr;
 }
 
-function assignBuUser()
+function getBUManagers($buId)
+{
+    global $DB, $CFG;
+    $useridsarr = array();
+    $q = "SELECT userid FROM {$CFG->prefix}cm_bu_admins where bu_id= $buId";
+    $res = $DB->get_records_sql($q);
+    foreach ($res as $rec) {
+        $useridsarr[] = $rec->userid;
+    }
+    return $useridsarr;
+}
+
+function assignBuManager()
 {
     global $DB, $CFG;
 
@@ -1756,24 +1776,23 @@ function assignBuUser()
     $status = 0;
 
     if ($bu_id) {
-        $arrResults['Data']['status'] = BUuserEntry($bu_id, $user_id);
+        $arrResults['Data']['status'] = BUManagerEntry($bu_id, $user_id);
+        $roleassignment = adminRoleAssignment($user_id);
     }
-
     return $arrResults;
 }
 
-function BUuserEntry($bu_id, $user_id)
+function BUManagerEntry($bu_id, $user_id)
 {
     global $DB;
     $buuser = new stdClass();
     $buuser->bu_id = $bu_id;
     $buuser->userid = $user_id;
-    $buuser->timecreated = time();
-    $insertedid = $DB->insert_record('cm_bu_assignment', $buuser);
+    $insertedid = $DB->insert_record('cm_bu_admins', $buuser);
     return $insertedid;
 }
 
-function UnassignBuUser()
+function UnassignBuManager()
 {
     global $DB, $CFG;
 
@@ -1781,7 +1800,8 @@ function UnassignBuUser()
     $user_id = $_POST['user_id'];
 
     if (!empty($bu_id)) {
-        $DB->delete_records('cm_bu_assignment', array('userid' => $user_id, 'bu_id' => $bu_id));
+        $DB->delete_records('cm_bu_admins', array('userid' => $user_id, 'bu_id' => $bu_id));
+        $DB->delete_records('role_assignments', array('userid' => $user_id, 'contextid' => 1, 'roleid' => 1));
         $arrResults['Data'] = 1;
     }
     return $arrResults;
@@ -1789,8 +1809,8 @@ function UnassignBuUser()
 
 function handleBuEntry($bu_id, $user_id)
 {
-    global $DB,$CFG;
-    
+    global $DB, $CFG;
+
     $sql = "select id from {$CFG->prefix}cm_bu_assignment where userid= $user_id";
     $rec = $DB->get_record_sql($sql);
     $result = '';
@@ -1803,4 +1823,50 @@ function handleBuEntry($bu_id, $user_id)
         $result = $DB->execute($q, [$bu_id, $user_id]);
     }
     return $result;
+}
+
+function adminRoleAssignment($uidd)
+{
+    global $DB;
+    $ra1 = '';
+    if (!$DB->record_exists('role_assignments', array('userid' => $uidd, 'contextid' => 1, 'roleid' => 1))) {
+        $ra1 = new stdClass();
+        $ra1->roleid = 1;
+        $ra1->contextid = 1;
+        $ra1->userid = $uidd;
+        $ra1->component = '';
+        $ra1->itemid = 0;
+        $ra1->timemodified = strtotime("now");
+        $ra1->modifierid = empty($USER->id) ? 0 : $USER->id;
+        $ra1->sortorder = 0;
+        $ra1 = $DB->insert_record('role_assignments', $ra1);
+    }
+    return $ra1;
+}
+
+function DeleteBu()
+{
+    global $DB, $CFG;
+    $bu_id = $_POST['bu_id'];
+
+    if (!empty($bu_id)) {
+        deleteBUusers($bu_id);
+        $DB->delete_records('cm_business_units', array("id" => $bu_id));
+        $DB->delete_records('cm_bu_admins', array("bu_id" => $bu_id));
+        $DB->delete_records('cm_bu_assignment', array("bu_id" => $bu_id));
+        $DB->delete_records('cm_bu_course', array("bu_id" => $bu_id));
+        $arrResults['Data'] = 1;
+    }
+    return $arrResults;
+}
+
+function deleteBUusers($bu_id)
+{
+    global $DB, $CFG;
+    $q = "SELECT userid FROM {$CFG->prefix}cm_bu_assignment where bu_id=$bu_id";
+    $res = $DB->get_records_sql($q);
+    foreach ($res as $rec) {
+        $status = $DB->delete_records('user', array("id" => $rec->userid));
+    }
+    return $status;
 }
