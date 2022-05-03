@@ -1528,13 +1528,21 @@ function createBU()
 {
     global $DB, $CFG;
     $bu_name = $_POST['bu_name'];
+    $logo_file = $_POST['logoFile'];
+    $logoFileName = $_POST['logoFileName'];
     $arrResults = array();
     if ($bu_name) {
         $BU = new stdClass;
         $BU->bu_name = $bu_name;
+        $BU->logo_img_name = $logoFileName;
         $BU->parent = 1;
         $BU->sortorder = 0;
-        $arrResults['Data'] = $DB->insert_record('cm_business_units', $BU);
+        $buId = $DB->insert_record('cm_business_units', $BU);
+        $arrResults['Data'] = $buId;
+        if (!empty($logoFileName)) {
+            logo_upload($logo_file, $logoFileName, $buId);
+        }
+
     }
     return $arrResults;
 }
@@ -1549,12 +1557,16 @@ function get_bu_by_id()
         $rec = $DB->get_record_sql($q);
         $response = new stdClass();
         $response->buname = $rec->bu_name;
+        $response->logo_name = $rec->logo_img_name;
+        if (!empty($response->logo_name)) {
+            $response->logo_path = "/cm/api/uploads/bu_" . $rec->id . '/' . $rec->logo_img_name;
+        }
         $arrResults['Data'] = $response;
     }
     return $arrResults;
 }
 
-function update_bu()
+function updateBU()
 {
     global $DB, $CFG;
     $bu_name = $_POST["bu_name"];
@@ -1581,6 +1593,12 @@ function listBU()
         $new_data = new stdClass();
         $new_data->bu_name = $rec->bu_name;
         $new_data->bu_id = $rec->id;
+        if (!empty($rec->logo_img_name)) {
+            $new_data->bu_logo_path = "/cm/api/uploads/bu_" . $rec->id . '/' . $rec->logo_img_name;
+        }
+        else{
+            $new_data->bu_logo_path =  '/cm/lp/lpimages/istockphoto.jpg';
+        }
         $q1 = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$rec->id";
         $res = $DB->get_record_sql($q1);
         $q2 = "SELECT count(Distinct(userid)) as usercnt FROM {$CFG->prefix}cm_bu_assignment where bu_id=$rec->id";
@@ -1591,6 +1609,30 @@ function listBU()
     }
     $arrResults['Data'] = $response;
 
+    return $arrResults;
+}
+
+function getMyEnrolledBUs()
+{
+    global $DB, $CFG;
+    $user_id = $_POST['userid'];
+
+    if (!empty($user_id)) {
+
+        $bu_arr= listBU();
+        $bu_res =  $bu_arr['Data'];
+
+        foreach ($bu_res as $rec) {
+            $new_data = new stdClass();
+            $new_data->id = $rec->bu_id;
+            $new_data->buName = $rec->bu_name;
+            $new_data->imgUrl = $CFG->wwwroot . $rec->bu_logo_path;
+            $new_data->buCourses = $rec->bu_courses_cnt;
+            $new_data->buUsers = $rec->bu_users_cnt;
+            $BU[] = $new_data;
+        }
+        $arrResults['Data'] = $BU;
+    }
     return $arrResults;
 }
 
@@ -1735,7 +1777,7 @@ function getBUUsers()
 function getBuByUid($uId)
 {
     global $DB, $CFG;
-    $q = "SELECT bu.id,bu.bu_name FROM {$CFG->prefix}cm_business_units as bu join {$CFG->prefix}cm_bu_assignment as bas on bas.bu_id=bu.id where bas.userid=$uId";
+    $q = "SELECT bu.id,bu.bu_name,logo_img_name FROM {$CFG->prefix}cm_business_units as bu join {$CFG->prefix}cm_bu_assignment as bas on bas.bu_id=bu.id where bas.userid=$uId";
     $req = $DB->get_record_sql($q);
     return $req;
 }
@@ -1785,10 +1827,21 @@ function assignBuManager()
 function BUManagerEntry($bu_id, $user_id)
 {
     global $DB;
+    $buManager = new stdClass();
+    $buManager->bu_id = $bu_id;
+    $buManager->userid = $user_id;
+    $insertedid = $DB->insert_record('cm_bu_admins', $buManager);
+    return $insertedid;
+}
+
+function BUuserEntry($bu_id, $user_id)
+{
+    global $DB;
     $buuser = new stdClass();
     $buuser->bu_id = $bu_id;
     $buuser->userid = $user_id;
-    $insertedid = $DB->insert_record('cm_bu_admins', $buuser);
+    $buuser->timecreated = time();
+    $insertedid = $DB->insert_record('cm_bu_assignment', $buuser);
     return $insertedid;
 }
 
@@ -1869,4 +1922,17 @@ function deleteBUusers($bu_id)
         $status = $DB->delete_records('user', array("id" => $rec->userid));
     }
     return $status;
+}
+
+function logo_upload($fileString, $fileName, $bu_id)
+{
+    if (!empty($fileString)) {
+        list($type, $data) = explode(';', $fileString);
+        list(, $data) = explode(',', $data);
+        if (!file_exists("uploads/logos/bu_$bu_id/")) {
+            mkdir("uploads/bu_$bu_id/", 0777, true);
+        }
+        $data = base64_decode($data);
+        file_put_contents("uploads/bu_$bu_id/" . $fileName, $data);
+    }
 }
