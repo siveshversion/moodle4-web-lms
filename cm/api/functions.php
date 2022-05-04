@@ -1293,7 +1293,7 @@ function getLPCoursesArr($lpId)
 {
     global $DB, $CFG;
 
-    $q = "SELECT lp_courseid as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpId";
+    $q = "SELECT lp_courseid as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpId order by sorder ASC";
     $cids = $DB->get_records_sql($q);
 
     $courses = array();
@@ -1935,4 +1935,27 @@ function logo_upload($fileString, $fileName, $bu_id)
         $data = base64_decode($data);
         file_put_contents("uploads/bu_$bu_id/" . $fileName, $data);
     }
+}
+
+function LpCourseSorting(){
+    global $DB, $CFG;
+
+    $lpId = $_POST['lp_id'];
+    $json_courses = $_POST['courses_arr'];
+    $courses_arr = json_decode($json_courses,true);
+    $arrResults['Data']= '';
+
+    if (!empty($lpId)) {
+        $i=1;
+        foreach($courses_arr as $course)
+        {
+            $cId = $course['id'];
+            $q = "UPDATE {$CFG->prefix}cm_lp_course SET sorder = ? WHERE lp_id =? and lp_courseid=?";
+            $result = $DB->execute($q, [$i, $lpId,$cId]);
+            $arrResults['Data']= $result;
+            ++$i;
+        }
+        
+    }
+    return $arrResults;
 }
