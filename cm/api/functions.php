@@ -75,20 +75,15 @@ function validateLogin($arrInput)
 
                 $DB->set_field('user_private_key', 'value', $vMoodleToken, array('userid' => $vUserId, 'script' => 'auth/userkey'));
             } else {
-
                 $objUserAuth = new stdClass();
                 $objUserAuth->script = 'auth/userkey';
                 $objUserAuth->value = $vMoodleToken;
                 $objUserAuth->userid = $vUserId;
                 $objUserAuth->timecreated = time();
-
                 $DB->insert_record('user_private_key', $objUserAuth);
 
             }
-
-            $knownsiteadmins = $CFG->siteadmins;
-            $siteadmins = explode(',', $CFG->siteadmins);
-            $siteAdmin = in_array($vUsernameExits->id, $siteadmins);
+            $siteAdmin = checkisSiteAdmin($vUsernameExits->id);
 
             if ($siteAdmin) {
                 $vRole = 'admin';
@@ -527,6 +522,7 @@ function listCourses()
     if (isset($_POST['userId'])) {
         $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
         $courses = $DB->get_records_sql($q);
+        $i = 1;
         foreach ($courses as $rec) {
             $new_data = new stdClass();
             $cat = new stdClass();
@@ -534,6 +530,7 @@ function listCourses()
             $cat->fieldname = 'name';
             $cat->recid = 'id';
             $cat->id = $rec->category;
+            $new_data->sno = $i;
             $new_data->course_fullname = $rec->fullname;
             $new_data->course_shortname = $rec->shortname;
             $category = get_field_by_id($cat);
@@ -543,6 +540,7 @@ function listCourses()
             $participants = getEnrolledUsers($rec->id, $moodledata);
             $new_data->enrolled_cnt = count($participants);
             $response[] = $new_data;
+            ++$i;
         }
         $arrResults['Data'] = $response;
     }
@@ -1595,9 +1593,8 @@ function listBU()
         $new_data->bu_id = $rec->id;
         if (!empty($rec->logo_img_name)) {
             $new_data->bu_logo_path = "/cm/api/uploads/bu_" . $rec->id . '/' . $rec->logo_img_name;
-        }
-        else{
-            $new_data->bu_logo_path =  '/cm/lp/lpimages/istockphoto.jpg';
+        } else {
+            $new_data->bu_logo_path = '/cm/lp/lpimages/istockphoto.jpg';
         }
         $q1 = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$rec->id";
         $res = $DB->get_record_sql($q1);
@@ -1619,8 +1616,8 @@ function getMyEnrolledBUs()
 
     if (!empty($user_id)) {
 
-        $bu_arr= listBU();
-        $bu_res =  $bu_arr['Data'];
+        $bu_arr = listBU();
+        $bu_res = $bu_arr['Data'];
 
         foreach ($bu_res as $rec) {
             $new_data = new stdClass();
@@ -1890,7 +1887,7 @@ function adminRoleAssignment($uidd)
         $ra1->component = '';
         $ra1->itemid = 0;
         $ra1->timemodified = strtotime("now");
-        $ra1->modifierid = empty($USER->id) ? 0 : $USER->id;
+        $ra1->modifierid = empty($user->id) ? 0 : $user->id;
         $ra1->sortorder = 0;
         $ra1 = $DB->insert_record('role_assignments', $ra1);
     }
@@ -1937,25 +1934,166 @@ function logo_upload($fileString, $fileName, $bu_id)
     }
 }
 
-function LpCourseSorting(){
+function LpCourseSorting()
+{
     global $DB, $CFG;
 
     $lpId = $_POST['lp_id'];
     $json_courses = $_POST['courses_arr'];
-    $courses_arr = json_decode($json_courses,true);
-    $arrResults['Data']= '';
+    $courses_arr = json_decode($json_courses, true);
+    $arrResults['Data'] = '';
 
     if (!empty($lpId)) {
-        $i=1;
-        foreach($courses_arr as $course)
-        {
+        $i = 1;
+        foreach ($courses_arr as $course) {
             $cId = $course['id'];
             $q = "UPDATE {$CFG->prefix}cm_lp_course SET sorder = ? WHERE lp_id =? and lp_courseid=?";
-            $result = $DB->execute($q, [$i, $lpId,$cId]);
-            $arrResults['Data']= $result;
+            $result = $DB->execute($q, [$i, $lpId, $cId]);
+            $arrResults['Data'] = $result;
             ++$i;
         }
-        
+
     }
     return $arrResults;
+}
+
+function courseReport()
+{
+    global $DB, $CFG;
+    $userId = $_POST['userId'];
+    $response = array();
+    $siteAdmin = checkisSiteAdmin($userId);
+
+    $user = $DB->get_record('user', array("id" => $userId));
+    $user->cm_bu_id = getBuByUid($userId);
+
+    if ($siteAdmin) {
+        $q1 = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1";
+        $courses = $DB->get_records_sql($q1);
+    } else {
+        $cmuserfilterbuids = $user->cm_bu_id . ',' . $cmuserfilters;
+        $cmuserfilter = trim($cmuserfilterbuids, ',');
+        if (!empty($cmuserfilter)) {
+            $q2 = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.cm_bu_id = $user->cm_bu_id";
+            $courses = $DB->get_records_sql($q2);
+        }
+    }
+    $row = 0;
+    foreach ($courses as $rec) {
+        $newData = new stdClass();
+        $newData->sno = ++$row;
+        $newData->course_id = $rec->id;
+        $newData->course_fullname = $rec->fullname;
+        $newData->enrolled_cnt = get_enrolled($rec->id, $user);
+        $newData->completed_cnt = get_progress($rec->id, $user, 100);
+        $newData->inprogress_cnt = get_progress($rec->id, $user, 50);
+        $newData->notstarted_cnt = get_progress($rec->id, $user, 0);
+
+        $response[] = $newData;
+    }
+    $arrResults['Data'] = $response;
+
+    return $arrResults;
+}
+
+function get_enrolled($cid, $user)
+{
+    $enrolled = count(get_enrolled_uids($cid, $user));
+    return $enrolled;
+}
+
+function get_enrolled_uids($cid, $user)
+{
+    global $DB, $CFG;
+
+    $siteAdmin = checkisSiteAdmin($user->id);
+
+    if ($siteAdmin) {
+        $q1 = "select u.id from {enrol}  e join {user_enrolments} ue on e.id = ue.enrolid join {course} c on e.courseid = c.id join {user} u on u.id = ue.userid where c.id = $cid and c.visible !=0 and deleted = 0";
+        $enusers = $DB->get_records_sql($q1);
+    } else {
+        $cmuserfilterbuids = $user->cm_bu_id . ',' . $cmuserfilters;
+        $assigned_userids_arr = getBUAssignedUsers($user->cm_bu_id);
+        $cmuserfilter = implode(',', $assigned_userids_arr);
+
+        if (!empty($cmuserfilter)) {
+            $q2 = "select u.id from {enrol}  e join {user_enrolments} ue on e.id = ue.enrolid join {course} c on e.courseid = c.id join {user} u on u.id = ue.userid where c.id = $cid and c.visible !=0 and deleted = 0 and u.id in($cmuserfilter)";
+            $enusers = $DB->get_records_sql($q2);
+        }
+    }
+    return $enusers;
+}
+
+function get_progress($cid, $user, $progress_rate)
+{
+
+    global $CFG, $DB;
+
+    $enusers = get_enrolled_uids($cid, $user);
+    foreach ($enusers as $user) {
+
+        $totals = $DB->get_records_sql("select * from {course_modules} where course = $cid and deletioninprogress = 0 and module != 9 ");
+        $total = count($totals);
+
+        $attempt = $DB->get_records_sql("select a.id  from {course_modules_completion} as a
+         join {course_modules} as b on a.coursemoduleid = b.id
+         where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1");
+
+        $attempted = count($attempt);
+
+        $value = $attempted / $total * 100;
+        $comptnmethod = $DB->get_record('course_completion_aggr_methd', array('criteriatype' => 4, 'course' => $cid));
+        if ($comptnmethod->method == 2) {
+            if ($attempted >= 1) {
+                $compteprogress = 100;
+            } else {
+                $compteprogress = 0;
+            }
+        } else {
+            if ($attempted != 0) {
+                $compteprogress = number_format($value, 0);
+            } else {
+                $compteprogress = 0;
+            }
+        }
+
+        $progress_cnt = '';
+
+        if ($progress_rate == 100) {
+            if ($compteprogress == 100) {
+                $sqll = $DB->get_record_sql("select id  from {course} where id= $cid ");
+                $comptecourse[] = $sqll->id;
+            }
+            $progress_cnt = count($comptecourse);
+        }
+
+        if ($progress_rate == 50) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
+            if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $cid");
+                $myinprogcourse[] = $sqll;
+            }
+            $progress_cnt = count($myinprogcourse);
+        }
+
+        if ($progress_rate == 0) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
+            if (empty($courselastaccess->cout)) {
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $cid ");
+                $mynonstartcourse[] = $sqll;
+            }
+            $progress_cnt = count($mynonstartcourse);
+        }
+    }
+    $progress_cnt = empty($progress_cnt) ? 0 : $progress_cnt;
+    return $progress_cnt;
+}
+
+function checkisSiteAdmin($userId)
+{
+    global $CFG;
+    $knownsiteadmins = $CFG->siteadmins;
+    $siteadmins = explode(',', $CFG->siteadmins);
+    $siteAdmin = in_array($userId, $siteadmins);
+    return $siteAdmin;
 }
