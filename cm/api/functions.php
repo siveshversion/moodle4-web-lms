@@ -2097,3 +2097,125 @@ function checkisSiteAdmin($userId)
     $siteAdmin = in_array($userId, $siteadmins);
     return $siteAdmin;
 }
+
+function courseDetailedReport()
+{
+    global $DB, $CFG;
+    $userId = $_POST['userId'];
+    $CourseId = $_POST['course_id'];
+    $type = $_POST['type'];
+    $response = array();
+    $siteAdmin = checkisSiteAdmin($userId);
+
+    $user = $DB->get_record('user', array("id" => $userId));
+    $user->cm_bu_id = getBuByUid($userId);
+
+    if ($siteAdmin) {
+        $q1 = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id = $CourseId";
+        $course = $DB->get_record_sql($q1);
+    } else {
+        $cmuserfilterbuids = $user->cm_bu_id . ',' . $cmuserfilters;
+        $cmuserfilter = trim($cmuserfilterbuids, ',');
+        if (!empty($cmuserfilter)) {
+            $q2 = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.cm_bu_id = $user->cm_bu_id and c.id = $CourseId";
+            $course = $DB->get_record_sql($q2);
+        }
+    }
+    $row = 0;
+
+    $newData = new stdClass();
+
+    if ($type == 'enrolled') {
+        $userids_arr = get_enrolled_uids($course->id, $user);
+    } else if ($type == 'completed') {
+        $userids_arr = get_uids_progress($course->id, $user, 100);
+    } else if ($type == 'inprogress') {
+        $userids_arr = get_uids_progress($course->id, $user, 50);
+    } else if ($type == 'notstarted') {
+        $userids_arr = get_uids_progress($course->id, $user, 0);
+    }
+
+    $i = 0;
+    foreach ($userids_arr as $res) {
+        $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') and id=$res->id";
+        $user_res = $DB->get_record_sql($sql);
+        $new_data = new stdClass();
+        $new_data->sl_no = ++$i;
+        $new_data->user_name = $user_res->username;
+        $new_data->user_fullname = $user_res->fullname;
+        $new_data->user_id = $user_res->id;
+        $BU = getBuByUid($user_res->id);
+        $new_data->bu_name = $BU->bu_name;
+        $response[] = $new_data;
+    }
+    $arrResults['Data']['Course'] = $course;
+    $arrResults['Data']['Participants'] = $response;
+
+    return $arrResults;
+}
+
+function get_uids_progress($cid, $u, $progress_rate)
+{
+
+    global $CFG, $DB;
+
+    $enusers = get_enrolled_uids($cid, $u);
+
+    $userids_arr = array();
+
+    foreach ($enusers as $user) {
+
+        $totals = $DB->get_records_sql("select * from {course_modules} where course = $cid and deletioninprogress = 0 and module != 9 ");
+        $total = count($totals);
+
+        $attempt = $DB->get_records_sql("select a.id  from {course_modules_completion} as a
+         join {course_modules} as b on a.coursemoduleid = b.id
+         where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1");
+
+        $attempted = count($attempt);
+
+        $value = $attempted / $total * 100;
+        $comptnmethod = $DB->get_record('course_completion_aggr_methd', array('criteriatype' => 4, 'course' => $cid));
+        if ($comptnmethod->method == 2) {
+            if ($attempted >= 1) {
+                $compteprogress = 100;
+            } else {
+                $compteprogress = 0;
+            }
+        } else {
+            if ($attempted != 0) {
+                $compteprogress = number_format($value, 0);
+            } else {
+                $compteprogress = 0;
+            }
+        }
+
+        if ($progress_rate == 100) {
+            if ($compteprogress == 100) {
+                $sqll = $DB->get_record_sql("select id  from {course} where id= $cid ");
+                $comptecourse[] = $sqll->id;
+                $userids_arr[] = $user;
+            }
+        }
+
+        if ($progress_rate == 50) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
+            if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $cid");
+                $myinprogcourse[] = $sqll;
+                $userids_arr[] = $user;
+            }
+        }
+
+        if ($progress_rate == 0) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
+            if (empty($courselastaccess->cout)) {
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $cid ");
+                $mynonstartcourse[] = $sqll;
+                $userids_arr[] = $user;
+            }
+        }
+    }
+    // $progress_cnt = empty($progress_cnt) ? 0 : $progress_cnt;
+    return $userids_arr;
+}
