@@ -837,12 +837,13 @@ function unenrollUserToCourse()
     return $arrResults;
 }
 
-function getMyEnrolledCourses($arrInput)
+function mod_get_filtered_courses($arrInput)
 {
     global $CFG, $DB;
 
     $vUserId = $arrInput["userid"];
     $token = $arrInput["user_key"];
+    $filtertype = $arrInput["selected_filter"];
 
     $objCategories = $DB->get_records('course_categories');
 
@@ -864,14 +865,7 @@ function getMyEnrolledCourses($arrInput)
 
     foreach ($arrEnrolledCourses as $course) {
 
-        //get cost
-        $sql = "select cost from {$CFG->prefix}enrol where courseid = $course[id] and enrol = 'credit'";
-        $objCourseCost = $DB->get_record_sql($sql);
-        if ($objCourseCost->cost != '') {
-            $vCredit = $objCourseCost->cost;
-        } else {
-            $vCredit = '0.00';
-        }
+        $vCredit = '0.00';
 
         $arrDummyResults[$course["id"]]['id'] = $course["id"];
         $arrDummyResults[$course["id"]]['fullname'] = $course["fullname"];
@@ -894,17 +888,48 @@ function getMyEnrolledCourses($arrInput)
 
     $count = 0;
     foreach ($arrDummyResults as $course) {
-        $arrResults['Data'][$count]['id'] = $course["id"];
-        $arrResults['Data'][$count]['fullname'] = $course["fullname"];
-        $arrResults['Data'][$count]['category'] = $course["category"];
-        $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
-        $arrResults['Data'][$count]['progress'] = $course["progress"];
-        $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
-        $arrResults['Data'][$count]['credits'] = $course["credits"];
-        $arrResults['Data'][$count]['status'] = 1;
-        $arrResults['Data'][$count]['total_course_count'] = $vTotalCoursesCount;
-
-        $count++;
+        $progress= round($course["progress"]);
+        if (($filtertype == 'enrolled') || ($filtertype == '')) {
+            $arrResults['Data'][$count]['id'] = $course["id"];
+            $arrResults['Data'][$count]['fullname'] = $course["fullname"];
+            $arrResults['Data'][$count]['category'] = $course["category"];
+            $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
+            $arrResults['Data'][$count]['progress'] = $progress;
+            $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+            $arrResults['Data'][$count]['credits'] = $course["credits"];
+            $arrResults['Data'][$count]['status'] = 1;
+            $count++;
+        } else if (($filtertype == 'completed') && ($progress == 100)) {
+            $arrResults['Data'][$count]['id'] = $course["id"];
+            $arrResults['Data'][$count]['fullname'] = $course["fullname"];
+            $arrResults['Data'][$count]['category'] = $course["category"];
+            $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
+            $arrResults['Data'][$count]['progress'] = $progress;
+            $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+            $arrResults['Data'][$count]['credits'] = $course["credits"];
+            $arrResults['Data'][$count]['status'] = 1;
+            $count++;
+        } else if (($filtertype == 'not_started') && ($progress == 0)) {
+            $arrResults['Data'][$count]['id'] = $course["id"];
+            $arrResults['Data'][$count]['fullname'] = $course["fullname"];
+            $arrResults['Data'][$count]['category'] = $course["category"];
+            $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
+            $arrResults['Data'][$count]['progress'] = $progress;
+            $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+            $arrResults['Data'][$count]['credits'] = $course["credits"];
+            $arrResults['Data'][$count]['status'] = 1;
+            $count++;
+        } else if (($filtertype == 'in_progress') && ($progress > 0) && ($progress < 100)) {
+            $arrResults['Data'][$count]['id'] = $course["id"];
+            $arrResults['Data'][$count]['fullname'] = $course["fullname"];
+            $arrResults['Data'][$count]['category'] = $course["category"];
+            $arrResults['Data'][$count]['categoryname'] = $course["categoryname"];
+            $arrResults['Data'][$count]['progress'] = $progress;
+            $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+            $arrResults['Data'][$count]['credits'] = $course["credits"];
+            $arrResults['Data'][$count]['status'] = 1;
+            $count++;
+        }
     }
 
     return $arrResults;
@@ -2104,6 +2129,7 @@ function courseDetailedReport()
     $userId = $_POST['userId'];
     $CourseId = $_POST['course_id'];
     $type = $_POST['type'];
+    $bu_id = $_POST['bu_id'];
     $response = array();
     $siteAdmin = checkisSiteAdmin($userId);
 
@@ -2146,7 +2172,13 @@ function courseDetailedReport()
         $new_data->user_id = $user_res->id;
         $BU = getBuByUid($user_res->id);
         $new_data->bu_name = $BU->bu_name;
-        $response[] = $new_data;
+        if($bu_id == $BU->id)
+        {
+            $response[] = $new_data;
+        }
+        else if($bu_id < 0){
+            $response[] = $new_data;
+        }       
     }
     $arrResults['Data']['Course'] = $course;
     $arrResults['Data']['Participants'] = $response;
@@ -2218,4 +2250,103 @@ function get_uids_progress($cid, $u, $progress_rate)
     }
     // $progress_cnt = empty($progress_cnt) ? 0 : $progress_cnt;
     return $userids_arr;
+}
+
+function generate_get_user_token($arrInput)
+{
+
+    global $CFG, $DB;
+
+    $vUsername = $arrInput['username'];
+    $vPassword = $arrInput['password'];
+
+    // $vUsername = 'admin';
+    // $vPassword = 'Learn@123';
+
+    $query = "select id from {$CFG->prefix}user where username like BINARY '$vUsername'";
+    $vUsernameExits = $DB->get_record_sql($query);
+
+    if ($vUsernameExits->id == '') {
+
+        $query = "select id from {$CFG->prefix}user where username like '$vUsername'";
+        $vUsernameExits = $DB->get_record_sql($query);
+    }
+
+    if ($vUsernameExits->id != '') {
+
+        $restformat = 'json';
+
+        $params = array('username' => $vUsername, 'password' => $vPassword);
+
+        $server_url = $CFG->wwwroot . '/login/token.php?service=moodle_mobile_app';
+
+        $curl = new curl;
+        $restformat = ($restformat == 'json') ? '&moodlewsrestformat=' . $restformat : '';
+
+        $resp = $curl->post($server_url . $restformat, $params);
+
+        $arrToken = json_decode($resp, true);
+
+        if ($arrToken[token] != '') {
+
+            //get userid from username
+            $objUser = $DB->get_record('user', array("username" => $vUsername));
+
+            //update token in user key auth plugin tables
+            $vMoodleToken = $arrToken[token];
+            $vUserId = $objUser->id;
+
+            $objUserKey = $DB->get_record('user_private_key', array('userid' => $vUserId, 'script' => 'auth/userkey'));
+
+            if ($objUserKey->id != '') {
+
+                $DB->set_field('user_private_key', 'value', $vMoodleToken, array('userid' => $vUserId, 'script' => 'auth/userkey'));
+            } else {
+                $objUserAuth = new stdClass();
+                $objUserAuth->script = 'auth/userkey';
+                $objUserAuth->value = $vMoodleToken;
+                $objUserAuth->userid = $vUserId;
+                $objUserAuth->timecreated = time();
+                $DB->insert_record('user_private_key', $objUserAuth);
+
+            }
+            $siteAdmin = checkisSiteAdmin($vUsernameExits->id);
+
+            if ($siteAdmin) {
+                $vRole = 'admin';
+            } else {
+                //check whether the user has the student role
+                $vLearners = 0;
+                $query = "SELECT id FROM {$CFG->prefix}role_assignments WHERE roleid = 5
+                            and userid = $objUser->id group by roleid";
+                $objInstructorsRoles = $DB->get_records_sql($query);
+
+                $vRole = 'student';
+            }
+
+            $arrResults['Data']['result'] = 1;
+            $arrResults['Data']['message'] = 'Success';
+            $arrResults['Data']['token'] = $arrToken[token];
+            $arrResults['Data']['userid'] = $objUser->id;
+            $arrResults['Data']['email'] = $objUser->email;
+            $arrResults['Data']['firstname'] = $objUser->firstname;
+            $arrResults['Data']['lastname'] = $objUser->lastname;
+            $arrResults['Data']['surname'] = $objUser->lastname;
+            $arrResults['Data']['country'] = $objUser->country;
+            $arrResults['Data']['city'] = $objUser->city;
+            $arrResults['Data']['phone1'] = $objUser->phone1;
+            $arrResults['Data']['role'] = $vRole;
+        } else {
+            $arrResults['Data']['result'] = 0;
+            $arrResults['Data']['token'] = '';
+            $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+        }
+
+    } else {
+        $arrResults['Data']['result'] = 0;
+        $arrResults['Data']['token'] = '';
+        $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+    }
+
+    return $arrResults;
 }
