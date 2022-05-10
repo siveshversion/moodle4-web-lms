@@ -27,9 +27,10 @@ $string['activitydate:due'] = 'Due:';
 $string['activityoverview'] = 'There are new forum posts';
 $string['actionsforgraderinterface'] = 'Actions for the grader interface';
 $string['actionsforpost'] = 'Actions for post';
-$string['addanewdiscussion'] = 'Add a new discussion topic';
+$string['addanewdiscussion'] = 'Add discussion topic';
 $string['addanewquestion'] = 'Add a new question';
 $string['addanewtopic'] = 'Add a new topic';
+$string['addreply'] = 'Add reply';
 $string['addtofavourites'] = 'Star this discussion';
 $string['advancedsearch'] = 'Advanced search';
 $string['alldiscussions'] = 'All discussions';
@@ -125,7 +126,7 @@ $string['configdigestmailtime'] = 'People who choose to have emails sent to them
 $string['configdisplaymode'] = 'The default display mode for discussions if one isn\'t set.';
 $string['configenablerssfeeds'] = 'This switch will enable the possibility of RSS feeds for all forums.  You will still need to turn feeds on manually in the settings for each forum.';
 $string['configenabletimedposts'] = 'Set to \'yes\' if you want to allow setting of display periods when posting a new forum discussion.';
-$string['configlongpost'] = 'Any post over this length (in characters not including HTML) is considered long. Posts displayed on the site front page, social format course pages, or user profiles are shortened to a natural break somewhere between the forum_shortpost and forum_longpost values.';
+$string['configlongpost'] = 'Any post over this length (in characters not including HTML) is considered long. Posts displayed on the site home, social format course pages, or user profiles are shortened to a natural break somewhere between the forum_shortpost and forum_longpost values.';
 $string['configmanydiscussions'] = 'Maximum number of discussions shown in a forum per page';
 $string['configmaxattachments'] = 'Default maximum number of attachments allowed per post.';
 $string['configmaxbytes'] = 'Default maximum size for all forum attachments on the site (subject to course limits and other local settings)';
@@ -204,6 +205,7 @@ $string['discussionsstartedby'] = 'Discussions started by {$a}';
 $string['discussionstartedby'] = 'Discussion started by {$a}';
 $string['discussionsstartedbyrecent'] = 'Discussions recently started by {$a}';
 $string['discussionsstartedbyuserincourse'] = 'Discussions started by {$a->fullname} in {$a->coursename}';
+$string['discussionsstartedincourse'] = 'Discussions started in {$a}';
 $string['discussionunpin'] = 'Unpin';
 $string['discussionunsubscribed'] = 'You are now unsubscribed from this discussion.';
 $string['discussthistopic'] = 'Discuss this topic';
@@ -223,6 +225,8 @@ $string['duedate_help'] = 'This is when posting in the forum is due. Although th
 $string['duedatetodisplayincalendar'] = 'Due date to display in calendar';
 $string['eachuserforum'] = 'Each person posts one discussion';
 $string['edit'] = 'Edit';
+$string['editdiscussion'] = 'Edit discussion';
+$string['editdiscussiontopic'] = 'Edit discussion topic';
 $string['editedby'] = 'Edited by {$a->name} - original submission {$a->date}';
 $string['editedpostupdated'] = '{$a}\'s post was updated';
 $string['editing'] = 'Editing';
@@ -258,11 +262,13 @@ $string['emaildigesttype_help'] = 'The type of notification that you will receiv
 * Digest - subjects only - you will receive one digest e-mail per day containing just the subject of each forum post.
 ';
 $string['emptymessage'] = 'Something was wrong with your post. Perhaps you left it blank, or the attachment was too big. Your changes have NOT been saved.';
+$string['errorcannotlock'] = 'You do not have the permission to lock discussions.';
+$string['errordiscussionnotfound'] = 'The discussion was not found';
 $string['erroremptymessage'] = 'Post message cannot be empty';
 $string['erroremptysubject'] = 'Post subject cannot be empty.';
 $string['errorenrolmentrequired'] = 'You must be enrolled in this course to access this content';
+$string['errorforumnotfound'] = 'The forum that this discussion belongs to was not found';
 $string['errorwhiledelete'] = 'An error occurred while deleting record.';
-$string['errorcannotlock'] = 'You do not have the permission to lock discussions.';
 $string['eventassessableuploaded'] = 'Some content has been posted.';
 $string['everyonecanchoose'] = 'Everyone can choose to be subscribed';
 $string['everyonecannowchoose'] = 'Everyone can now choose to be subscribed';
@@ -317,6 +323,7 @@ $string['forumposts'] = 'Forum posts';
 $string['forum:rate'] = 'Rate posts';
 $string['forum:replynews'] = 'Reply to announcements';
 $string['forum:replypost'] = 'Reply to posts';
+$string['replypostdiscussion'] = 'Reply to discussion';
 $string['forum:postprivatereply'] = 'Reply privately to posts';
 $string['forum:readprivatereplies'] = 'View private replies';
 $string['forums'] = 'Forums';
@@ -515,9 +522,6 @@ $string['postbymailsuccess_html'] = 'Your reply <a href="{$a->discussionurl}">{$
 $string['postbyuser'] = '{$a->post} by {$a->user}';
 $string['postincontext'] = 'See this post in context';
 $string['postmailinfo'] = 'This is a copy of a message posted in {$a}.';
-$string['postmailinfolink'] = 'This is a copy of a message posted in {$a->coursename}.
-
-To reply click on this link: {$a->replylink}';
 $string['postmailnow'] = '<p>This post will be mailed out immediately to all forum subscribers.</p>';
 $string['postmailreply'] = 'To reply click on this link: {$a}';
 $string['postmailsubject'] = '{$a->courseshortname}: {$a->subject}';
@@ -528,6 +532,7 @@ $string['posts'] = 'Posts';
 $string['postsfrom'] = 'Posts from';
 $string['postsmadebyuser'] = 'Posts made by {$a}';
 $string['postsmadebyuserincourse'] = 'Posts made by {$a->fullname} in {$a->coursename}';
+$string['postsmadeincourse'] = 'Posts made in {$a}';
 $string['poststo'] = 'Posts to';
 $string['posttoforum'] = 'Post to forum';
 $string['postupdated'] = 'Your post was updated';
@@ -599,6 +604,7 @@ $string['privatereply_help'] = 'A private reply can only be viewed by the author
 $string['processingdigest'] = 'Processing email digest for user {$a}';
 $string['processingpost'] = 'Processing post {$a}';
 $string['prune'] = 'Split';
+$string['prunediscussion'] = 'Split discussion';
 $string['prunedpost'] = 'A new discussion has been created from that post';
 $string['pruneheading'] = 'Split the discussion and move this post to a new discussion';
 $string['qandaforum'] = 'Q and A forum';
@@ -667,7 +673,7 @@ $string['smallmessage'] = '{$a->user} posted in {$a->forumname}';
 $string['smallmessagedigest'] = 'Forum digest containing {$a} messages';
 $string['startedby'] = 'Started by';
 $string['subject'] = 'Subject';
-$string['subscribe'] = 'Subscribe to this forum';
+$string['subscribe'] = 'Subscribe to forum';
 $string['subscribediscussion'] = 'Subscribe to this discussion';
 $string['subscribeall'] = 'Subscribe everyone to this forum';
 $string['subscribeenrolledonly'] = 'Sorry, only enrolled users are allowed to subscribe to forum post notifications.';
@@ -681,6 +687,7 @@ $string['subscription'] = 'Subscription';
 $string['subscription_help'] = 'If you are subscribed to a forum it means you will receive notification of new forum posts. Usually you can choose whether you wish to be subscribed, though sometimes subscription is forced so that everyone receives notifications.';
 $string['subscriptionandtracking'] = 'Subscription and tracking';
 $string['subscriptionmode'] = 'Subscription mode';
+$string['subscriptionmodeconfirm'] = 'Are you sure you want to change the subscription mode to {$a}?';
 $string['subscriptionmode_help'] = 'When a participant is subscribed to a forum it means they will receive forum post notifications. There are 4 subscription mode options:
 
 * Optional subscription - Participants can choose whether to be subscribed
@@ -713,18 +720,18 @@ $string['trackingoff'] = 'Off';
 $string['trackingon'] = 'Forced';
 $string['trackingoptional'] = 'Optional';
 $string['trackingtype'] = 'Read tracking';
-$string['trackingtype_help'] = 'Read tracking enables participants to easily check which posts they have not yet seen by highlighting any new posts.
+$string['trackingtype_help'] = 'Read tracking enables participants to check which posts they have not yet seen by highlighting any new posts.
 
-If set to optional, participants can choose whether to turn tracking on or off via a link in the actions menu or administration block, depending on the theme. (Users must also enable forum tracking in their forum preferences.)
+If set to optional, participants can choose whether to turn tracking on or off for the forum. (Users must also enable forum tracking in their forum preferences.)
 
-If \'Allow forced read tracking\' is enabled in the site administration, then a further option is available - forced. This means that tracking is always on, regardless of users\' forum preferences.';
+If \'Allow forced read tracking\' is enabled by a site administrator, then a further option is available - forced. This means that tracking is always on, regardless of users\' forum preferences.';
 $string['unlockdiscussion'] = 'Unlock this discussion';
 $string['unread'] = 'Unread';
 $string['unreadpost'] = 'Unread post';
 $string['unreadposts'] = 'Unread posts';
 $string['unreadpostsnumber'] = '{$a} unread posts';
 $string['unreadpostsone'] = '1 unread post';
-$string['unsubscribe'] = 'Unsubscribe from this forum';
+$string['unsubscribe'] = 'Unsubscribe from forum';
 $string['unsubscribelink'] = 'Unsubscribe from this forum: {$a}';
 $string['unsubscribediscussion'] = 'Unsubscribe from this discussion';
 $string['unsubscribediscussionlink'] = 'Unsubscribe from this discussion: {$a}';
@@ -778,8 +785,7 @@ $string['showmoreusers'] = 'Show more users';
 $string['viewconversation'] = 'View discussion';
 $string['viewgrades'] = 'View grades';
 
-// Deprecated since Moodle 3.8.
-$string['cannotdeletediscussioninsinglediscussion'] = 'You cannot delete the first post in a single discussion';
-$string['inpagereplysubject'] = 'Re: {$a}';
-$string['overviewnumpostssince'] = '{$a} posts since last login';
-$string['overviewnumunread'] = '{$a} total unread';
+// Deprecated since Moodle 4.0.
+$string['postmailinfolink'] = 'This is a copy of a message posted in {$a->coursename}.
+
+To reply click on this link: {$a->replylink}';

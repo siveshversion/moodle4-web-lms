@@ -44,7 +44,7 @@ class private_files extends \core_form\dynamic_form {
             if ($fileareainfo['filecount']) {
                 $a = (object) [
                     'used' => display_size($fileareainfo['filesize_without_references']),
-                    'total' => display_size($maxareabytes)
+                    'total' => display_size($maxareabytes, 0)
                 ];
                 $quotamsg = get_string('quotausage', 'moodle', $a);
                 $notification = new \core\output\notification($quotamsg, \core\output\notification::NOTIFY_INFO);
@@ -60,8 +60,10 @@ class private_files extends \core_form\dynamic_form {
         }
         $mform->setType('returnurl', PARAM_LOCALURL);
 
+        // The 'nosubmit' param (default false) determines whether we should show the standard form action buttons (save/cancel).
+        // This value is set when the form is displayed within a modal, which adds the action buttons itself.
         if (!$this->optional_param('nosubmit', false, PARAM_BOOL)) {
-            $this->add_action_buttons(false, get_string('savechanges'));
+            $this->add_action_buttons();
         }
     }
 

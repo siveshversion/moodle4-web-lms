@@ -36,11 +36,30 @@ if (!$course = $DB->get_record('course', array('id' => $courseid))) {
 }
 require_login($course);
 
-// Get the last viewed Page.
-if (!isset($USER->course_last_report[$courseid])) {
-    $lasturl = new moodle_url('/report/log/index.php', ['id' => $courseid]);
-} else {
-    $lasturl = $USER->course_last_report[$courseid];
+// Otherwise, output the page with a notification stating that there are no available course reports.
+$PAGE->set_title(get_string('reports'));
+$PAGE->set_pagelayout('incourse');
+$PAGE->set_heading($course->fullname);
+$PAGE->set_pagetype('course-view-' . $course->format);
+$PAGE->add_body_class('limitedwidth');
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading(get_string('reports'));
+
+// Check if there is at least one displayable report.
+$hasreports = false;
+if ($reportnode = $PAGE->settingsnav->find('coursereports', \navigation_node::TYPE_CONTAINER)) {
+    foreach ($reportnode->children as $child) {
+        if ($child->display) {
+            $hasreports = true;
+            break;
+        }
+    }
 }
 
-redirect($lasturl);
+if ($hasreports) {
+    echo $OUTPUT->render_from_template('core/report_link_page', ['node' => $reportnode]);
+} else {
+    echo html_writer::div($OUTPUT->notification(get_string('noreports', 'debug'), 'error'), 'mt-3');
+}
+echo $OUTPUT->footer();

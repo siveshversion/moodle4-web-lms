@@ -25,24 +25,24 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 define([
-        'jquery',
-        'core/templates',
-        'core/notification',
-        'core/pending',
-        'core/yui',
-        'mod_forum/selectors',
-        'mod_forum/inpage_reply',
-    ], function(
-        $,
-        Templates,
-        Notification,
-        Pending,
-        Y,
-        Selectors,
-        InPageReply
-    ) {
+    'jquery',
+    'core/templates',
+    'core/notification',
+    'core/pending',
+    'mod_forum/selectors',
+    'mod_forum/inpage_reply',
+    'core_form/changechecker',
+], function(
+    $,
+    Templates,
+    Notification,
+    Pending,
+    Selectors,
+    InPageReply,
+    FormChangeChecker
+) {
 
-    var registerEventListeners = function(root) {
+    var registerEventListeners = function(root, throttlingwarningmsg) {
         root.on('click', Selectors.post.inpageReplyLink, function(e) {
             e.preventDefault();
             // After adding a reply a url hash is being generated that scrolls (points) to the newly added reply.
@@ -65,7 +65,8 @@ define([
                 sesskey: M.cfg.sesskey,
                 parentsubject: currentSubject.data('replySubject'),
                 canreplyprivately: $(e.currentTarget).data('can-reply-privately'),
-                postformat: InPageReply.CONTENT_FORMATS.MOODLE
+                postformat: InPageReply.CONTENT_FORMATS.MOODLE,
+                throttlingwarningmsg: throttlingwarningmsg
             };
 
             if (!currentRoot.find(Selectors.post.inpageReplyContent).length) {
@@ -78,13 +79,10 @@ define([
                             .slideToggle(300, pending.resolve).find('textarea').focus();
                     })
                     .then(function() {
-                        // Load formchangechecker module.
-                        Y.use('moodle-core-formchangechecker', () => {
-                            M.core_formchangechecker.init({formid: `inpage-reply-${context.postid}`});
-                        });
+                        FormChangeChecker.watchFormById(`inpage-reply-${context.postid}`);
                         return;
                     })
-                    .fail(Notification.exception);
+                    .catch(Notification.exception);
             } else {
                 var form = currentRoot.find(Selectors.post.inpageReplyContent);
                 form.slideToggle(300, pending.resolve);
@@ -96,8 +94,8 @@ define([
     };
 
     return {
-        init: function(root) {
-            registerEventListeners(root);
+        init: function(root, throttlingwarningmsg) {
+            registerEventListeners(root, throttlingwarningmsg);
             InPageReply.init(root);
         }
     };

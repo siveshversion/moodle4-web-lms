@@ -259,7 +259,7 @@ function mnet_encrypt_message($message, $remote_certificate) {
     // Generate a key resource from the remote_certificate text string
     $publickey = openssl_get_publickey($remote_certificate);
 
-    if ( gettype($publickey) != 'resource' ) {
+    if ($publickey === false) {
         // Remote certificate is faulty.
         return false;
     }
@@ -923,4 +923,16 @@ function mnet_strip_user($user, $fields) {
         $user = (object)$user;
     }
     return $user;
+}
+
+/**
+ * Return the deprecation notice of the Mnet.
+ *
+ * @return \core\output\notification
+ */
+function mnet_get_deprecation_notice(): \core\output\notification {
+    $notice = new \core\output\notification(get_string('xmlrpcmnetenabled', 'admin'),
+        \core\output\notification::NOTIFY_WARNING);
+
+    return $notice;
 }

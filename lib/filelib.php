@@ -1107,6 +1107,12 @@ function file_save_draft_area_files($draftitemid, $contextid, $component, $filea
         return $text;
     }
 
+    if ($itemid === false) {
+        // Catch a potentially dangerous coding error.
+        throw new coding_exception('file_save_draft_area_files was called with $itemid false. ' .
+                "This suggests a bug, because it would wipe all ($contextid, $component, $filearea) files.");
+    }
+
     $usercontext = context_user::instance($USER->id);
     $fs = get_file_storage();
 
@@ -2672,6 +2678,8 @@ function send_file($path, $filename, $lifetime = null , $filter=0, $pathisstring
 function send_stored_file($stored_file, $lifetime=null, $filter=0, $forcedownload=false, array $options=array()) {
     global $CFG, $COURSE;
 
+    static $recursion = 0;
+
     if (empty($options['filename'])) {
         $filename = null;
     } else {
@@ -2715,6 +2723,13 @@ function send_stored_file($stored_file, $lifetime=null, $filter=0, $forcedownloa
 
     // handle external resource
     if ($stored_file && $stored_file->is_external_file() && !isset($options['sendcachedexternalfile'])) {
+
+        // Have we been here before?
+        $recursion++;
+        if ($recursion > 10) {
+            throw new coding_exception('Recursive file serving detected');
+        }
+
         $stored_file->send_file($lifetime, $filter, $forcedownload, $options);
         die;
     }
@@ -3667,7 +3682,7 @@ class curl {
         }
 
         // Augment all installed plugin's security helpers if there is any.
-        // The plugin's function has to be defined as plugintype_pluginname_security_helper in pluginname/lib.php file.
+        // The plugin's function has to be defined as plugintype_pluginname_curl_security_helper in pluginname/lib.php.
         $plugintypes = get_plugins_with_function('curl_security_helper');
 
         // If any of the security helper's function returns true, treat as URL is blocked.

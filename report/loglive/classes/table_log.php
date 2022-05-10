@@ -116,7 +116,7 @@ class report_loglive_table_log extends table_sql {
      * @return string HTML for the time column
      */
     public function col_time($event) {
-        $recenttimestr = get_string('strftimedatetime', 'core_langconfig');
+        $recenttimestr = get_string('strftimedatetimeaccurate', 'core_langconfig');
         return userdate($event->timecreated, $recenttimestr);
     }
 
@@ -403,5 +403,20 @@ class report_loglive_table_log extends table_sql {
                         array('context' => $context)));
             }
         }
+    }
+
+    /**
+     * Returns the latest timestamp of the records in the table.
+     *
+     * @return int
+     */
+    public function get_until(): int {
+        $until = $this->filterparams->date;
+        if (!empty($this->rawdata)) {
+            foreach ($this->rawdata as $row) {
+                $until = max($row->timecreated, $until);
+            }
+        }
+        return $until;
     }
 }

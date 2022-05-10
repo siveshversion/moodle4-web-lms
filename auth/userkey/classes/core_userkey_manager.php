@@ -97,7 +97,7 @@ class core_userkey_manager implements userkey_manager_interface {
      */
     public function delete_keys($userid) {
         //commented as we need user_auth keys for course viewing
-        //  delete_user_key(self::CORE_USER_KEY_MANAGER_SCRIPT, $userid);
+         //delete_user_key(self::CORE_USER_KEY_MANAGER_SCRIPT, $userid);
     }
 
     /**

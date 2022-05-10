@@ -1,7 +1,7 @@
 This files describes API changes in /backup/*,
 information provided here is intended especially for developers.
 
-=== 3.11.6 ===
+=== 4.0 ===
 
 * Backup UI labels now accept empty/whitespace-only contents.
 
