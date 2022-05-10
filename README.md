@@ -1,9 +1,9 @@
-# moodle311
+# moodle4
  Web LMS repository
  
- import **moodle311db.sql** db file into the DB using below comment.
+ import **moodle4db.sql** db file into the DB using below comment.
  
- mysql -u root -p moodle311db < **repositorypath\moodle311db.sql**
+ mysql -u root -p moodle311db < **repositorypath\moodle4db.sql**
  
  Delete **config.php** file
  
