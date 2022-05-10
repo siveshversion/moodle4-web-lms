@@ -888,7 +888,7 @@ function mod_get_filtered_courses($arrInput)
 
     $count = 0;
     foreach ($arrDummyResults as $course) {
-        $progress= round($course["progress"]);
+        $progress = round($course["progress"]);
         if (($filtertype == 'enrolled') || ($filtertype == '')) {
             $arrResults['Data'][$count]['id'] = $course["id"];
             $arrResults['Data'][$count]['fullname'] = $course["fullname"];
@@ -2172,13 +2172,11 @@ function courseDetailedReport()
         $new_data->user_id = $user_res->id;
         $BU = getBuByUid($user_res->id);
         $new_data->bu_name = $BU->bu_name;
-        if($bu_id == $BU->id)
-        {
+        if ($bu_id == $BU->id) {
+            $response[] = $new_data;
+        } else if ($bu_id < 0) {
             $response[] = $new_data;
         }
-        else if($bu_id < 0){
-            $response[] = $new_data;
-        }       
     }
     $arrResults['Data']['Course'] = $course;
     $arrResults['Data']['Participants'] = $response;
@@ -2347,6 +2345,61 @@ function generate_get_user_token($arrInput)
         $arrResults['Data']['token'] = '';
         $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
     }
+
+    return $arrResults;
+}
+
+function userCourseReport()
+{
+    global $DB, $CFG;
+    $userId = $_POST['userId'];
+    $buId = $_POST['bu_id'];
+    $response = array();
+    $siteAdmin = checkisSiteAdmin($userId);
+
+    $user = $DB->get_record('user', array("id" => $userId));
+    $user->cm_bu_id = getBuByUid($userId);
+
+    $q1 = "select value from {$CFG->prefix}config where name='siteadmins'";
+    $siteadmins_rec = $DB->get_record_sql($q1);
+    $siteadmins = $siteadmins_rec->value;
+    $q = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
+                 from {$CFG->prefix}user u where u.deleted = 0 and u.id > 1 and
+                 u.id NOT IN($siteadmins)";
+
+    $res = $DB->get_records_sql($q);
+
+    foreach ($res as $rec) {
+        $data = new stdClass;
+        $data->userid = $rec->id;
+        $data->username = $rec->username;
+        $data->firstname = $rec->firstname;
+        $data->lastname = $rec->lastname;
+        $BU = getBuByUid($rec->id);
+        $data->buName = $BU->bu_name;
+        $data->buId = $BU->id;
+        $filtered_users_arr[] = $data;
+    }
+
+    $row = 0;
+    foreach ($filtered_users_arr as $rec) {
+        $newData = new stdClass();
+        $newData->sno = ++$row;
+        $newData->user_id = $rec->userid;
+        $newData->user_name = $rec->username;
+        $newData->user_fullname = $rec->firstname . ' ' . $rec->lastname;
+        $newData->bu_name = $rec->buName;
+        // $newData->enrolled_cnt = get_enrolled($rec->id, $user);
+        // $newData->completed_cnt = get_progress($rec->id, $user, 100);
+        // $newData->inprogress_cnt = get_progress($rec->id, $user, 50);
+        // $newData->notstarted_cnt = get_progress($rec->id, $user, 0);
+        if ($buId == $rec->buId) {
+            $response[] = $newData;
+        } else if ($buId < 0) {
+            $response[] = $newData;
+        }
+    }
+    $arrResults['Data'] = $response;
 
     return $arrResults;
 }
