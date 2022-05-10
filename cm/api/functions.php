@@ -2009,10 +2009,10 @@ function courseReport()
         $newData->sno = ++$row;
         $newData->course_id = $rec->id;
         $newData->course_fullname = $rec->fullname;
-        $newData->enrolled_cnt = get_enrolled($rec->id, $user);
-        $newData->completed_cnt = get_progress($rec->id, $user, 100);
-        $newData->inprogress_cnt = get_progress($rec->id, $user, 50);
-        $newData->notstarted_cnt = get_progress($rec->id, $user, 0);
+        $newData->enrolled_cnt = get_custom_enrolled_users($rec->id, $user);
+        $newData->completed_cnt = get_progress_by_cid($rec->id, $user, 100);
+        $newData->inprogress_cnt = get_progress_by_cid($rec->id, $user, 50);
+        $newData->notstarted_cnt = get_progress_by_cid($rec->id, $user, 0);
 
         $response[] = $newData;
     }
@@ -2021,9 +2021,15 @@ function courseReport()
     return $arrResults;
 }
 
-function get_enrolled($cid, $user)
+function get_custom_enrolled_users($cid, $user)
 {
     $enrolled = count(get_enrolled_uids($cid, $user));
+    return $enrolled;
+}
+
+function get_enrolled_courses($uid, $user)
+{
+    $enrolled = count(get_enrolled_cids($uid, $user));
     return $enrolled;
 }
 
@@ -2049,7 +2055,7 @@ function get_enrolled_uids($cid, $user)
     return $enusers;
 }
 
-function get_progress($cid, $user, $progress_rate)
+function get_progress_by_cid($cid, $user, $progress_rate)
 {
 
     global $CFG, $DB;
@@ -2112,6 +2118,92 @@ function get_progress($cid, $user, $progress_rate)
     }
     $progress_cnt = empty($progress_cnt) ? 0 : $progress_cnt;
     return $progress_cnt;
+}
+
+function get_progress_by_uid($uid, $user, $progress_rate)
+{
+    global $DB, $CFG;
+    $encourses = get_enrolled_cids($uid, $user);
+    foreach ($encourses as $course) {
+
+        $totals = $DB->get_records_sql("select * from {course_modules} where course = $course->id and deletioninprogress = 0 and module != 9 ");
+        $total = count($totals);
+
+        $attempt = $DB->get_records_sql("select a.id  from {course_modules_completion} as a
+                    join {course_modules} as b on a.coursemoduleid = b.id
+                    where a.userid = $uid and b.course = $course->id and b.module != 9 and completionstate >= 1");
+
+        $attempted = count($attempt);
+
+        $value = $attempted / $total * 100;
+        $comptnmethod = $DB->get_record('course_completion_aggr_methd', array('criteriatype' => 4, 'course' => $course->id));
+        if ($comptnmethod->method == 2) {
+            if ($attempted >= 1) {
+                $compteprogress = 100;
+            } else {
+                $compteprogress = 0;
+            }
+        } else {
+            if ($attempted != 0) {
+                $compteprogress = number_format($value, 0);
+            } else {
+                $compteprogress = 0;
+            }
+        }
+
+        $progress_cnt = '';
+
+        if ($progress_rate == 100) {
+            if ($compteprogress == 100) {
+                $sqll = $DB->get_record_sql("select id  from {course} where id= $course->id ");
+                $comptecourse[] = $sqll->id;
+            }
+            $progress_cnt = count($comptecourse);
+        }
+
+        if ($progress_rate == 50) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id and userid = $uid ");
+            if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+                //if($courselastaccess->cout > 0){
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $course->id");
+                $myinprogcourse[] = $sqll;
+            }
+            $progress_cnt = count($myinprogcourse);
+        }
+
+        if ($progress_rate == 0) {
+            $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id  and userid = $uid ");
+            if (empty($courselastaccess->cout)) {
+                $sqll = $DB->get_record_sql("select *  from {course} where id= $course->id ");
+                $mynonstartcourse[] = $sqll;
+            }
+            $progress_cnt = count($mynonstartcourse);
+        }
+    }
+    $progress_cnt = empty($progress_cnt) ? 0 : $progress_cnt;
+    return $progress_cnt;
+}
+
+function get_enrolled_cids($uid, $user)
+{
+    global $DB;
+
+    $siteAdmin = checkisSiteAdmin($user->id);
+
+    $user = $DB->get_record('user', array("id" => $user->id));
+    $user->cm_bu_id = getBuByUid($user->id);
+
+    if ($siteAdmin) {
+        $encourses = $DB->get_records_sql("select c.id from {enrol}  e join {user_enrolments} ue on e.id = ue.enrolid join {course} c on e.courseid = c.id where ue.userid = $uid and c.visible !=0  and c.category !=0");
+    } else {
+        $cmuserfilter = $user->cm_bu_id;
+        if (!empty($cmuserfilter)) {
+
+            $encourses = $DB->get_records_sql("select c.id from {enrol}  e join {user_enrolments} ue on e.id = ue.enrolid join {course} c on e.courseid = c.id join {user} u on u.id = ue.userid where ue.userid = $uid and c.visible !=0  and c.category !=0 and u.cm_bu_id = $user->cm_bu_id ");
+
+        }
+    }
+    return $encourses;
 }
 
 function checkisSiteAdmin($userId)
@@ -2389,10 +2481,10 @@ function userCourseReport()
         $newData->user_name = $rec->username;
         $newData->user_fullname = $rec->firstname . ' ' . $rec->lastname;
         $newData->bu_name = $rec->buName;
-        // $newData->enrolled_cnt = get_enrolled($rec->id, $user);
-        // $newData->completed_cnt = get_progress($rec->id, $user, 100);
-        // $newData->inprogress_cnt = get_progress($rec->id, $user, 50);
-        // $newData->notstarted_cnt = get_progress($rec->id, $user, 0);
+        $newData->enrolled_cnt = get_enrolled_courses($rec->userid, $user);
+        $newData->completed_cnt = get_progress_by_uid($rec->userid, $user, 100);
+        $newData->inprogress_cnt = get_progress_by_uid($rec->userid, $user, 50);
+        $newData->notstarted_cnt = get_progress_by_uid($rec->userid, $user, 0);
         if ($buId == $rec->buId) {
             $response[] = $newData;
         } else if ($buId < 0) {
