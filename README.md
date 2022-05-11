@@ -9,4 +9,4 @@
  
  Run the localhost/project_directory_name in a browser and proceed the installation steps.
  
-** Note:** This repo consists of Moodle custom webservices (backend) which is needed for the PWA application/mobile app (android & ios) available below: https://github.com/siveshversion/moodlePWA
+** Note:** This repo consists of Moodle custom webservices (backend) which is needed for the PWA application/mobile app (android & ios) available below: https://github.com/siveshversion/moodle4PWA
