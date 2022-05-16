@@ -2694,3 +2694,33 @@ function get_activity_timestamp($uid, $cid, $class)
     }
     return $res;
 }
+
+function getUserDetail()
+{
+ global $DB, $CFG;
+ $response = new stdClass();
+ if (isset($_POST['wsfunction'])) {
+
+  $wsfunction = $_POST['wsfunction'];
+  $wstoken    = $_POST['wstoken'];
+  $user_id   = $_POST['user_id'];
+
+  $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+  $params =  array(
+     'field'   => 'id',
+     'values[0]' => $user_id
+  );
+
+  $curl          = new curl();
+  $curl_response = $curl->post($server_url, $params);
+  if (!empty($curl_response)) {
+   $json_arr = json_decode($curl_response, true);
+   $response->status = 1;
+   $response->info = $json_arr ;
+  }
+  $arrResults['Data'] = $response;
+ }
+ return $arrResults;
+
+}
