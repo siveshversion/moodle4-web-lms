@@ -2371,7 +2371,7 @@ function get_cids_progress($userId, $u, $progress_rate)
    if ($compteprogress == 100) {
     $sqll              = $DB->get_record_sql("select id  from {course} where id= $course->id ");
     $comptecourse[]    = $sqll->id;
-    $result_cids_arr[]  = $course;
+    $result_cids_arr[] = $course;
    }
   }
 
@@ -2380,7 +2380,7 @@ function get_cids_progress($userId, $u, $progress_rate)
    if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
     $sqll              = $DB->get_record_sql("select *  from {course} where id= $course->id");
     $myinprogcourse[]  = $sqll;
-    $result_cids_arr[]  = $course;
+    $result_cids_arr[] = $course;
    }
   }
 
@@ -2563,7 +2563,7 @@ function userDetailedReport()
   $uId                 = $_POST['userId'];
   $user_rec            = $DB->get_record('user', array("id" => $uId));
   $paramUser           = new stdClass();
-  $paramUser->id       =  $uId;
+  $paramUser->id       = $uId;
   $paramUser->fullname = $user_rec->firstname . ' ' . $user_rec->lastname;
   //getting logged in user details
   $loggedInUserId = $_POST['user_id'];
@@ -2592,9 +2592,9 @@ function userDetailedReport()
    $new_data              = new stdClass();
    $new_data->sl_no       = ++$i;
    $new_data->course_name = $course->fullname;
-   $new_data->enrolled_on = get_activity_timestamp($paramUser->id,$course->id,'timestart');
-   $new_data->last_access = get_activity_timestamp($paramUser->id,$course->id,'last_access');
-       $response[] = $new_data;
+   $new_data->enrolled_on = get_activity_timestamp($paramUser->id, $course->id, 'timestart');
+   $new_data->last_access = get_activity_timestamp($paramUser->id, $course->id, 'last_access');
+   $response[]            = $new_data;
   }
   $arrResults['Data']['User']    = $paramUser;
   $arrResults['Data']['Courses'] = $response;
@@ -2677,22 +2677,21 @@ function getMyEnrolledCourses($arrInput)
  return $arrResults;
 }
 
-
 function get_activity_timestamp($uid, $cid, $class)
 {
-       global $DB;
-    if ($class == 'timestart') {
-        $q1 = "select ue.timemodified from {enrol} e join {user_enrolments} ue on e.id = ue.enrolid join
+ global $DB;
+ if ($class == 'timestart') {
+  $q1 = "select ue.timemodified from {enrol} e join {user_enrolments} ue on e.id = ue.enrolid join
         {user} u on u.id = ue.userid where u.id = $uid and e.courseid=$cid";
-        $timestamp = $DB->get_record_sql($q1);
-        $res = (!empty($timestamp->timemodified)) ? date('d-m-Y', $timestamp->timemodified) : '-';
-    }
-    if ($class == 'last_access') {
-        $q1 = "select timeaccess from {user_lastaccess} where userid=$uid and courseid=$cid";
-        $timestamp = $DB->get_record_sql($q1);
-        $res = (!empty($timestamp->timeaccess)) ? date('d-m-Y', $timestamp->timeaccess) : '-';
-    }
-    return $res;
+  $timestamp = $DB->get_record_sql($q1);
+  $res       = (!empty($timestamp->timemodified)) ? date('d-m-Y', $timestamp->timemodified) : '-';
+ }
+ if ($class == 'last_access') {
+  $q1        = "select timeaccess from {user_lastaccess} where userid=$uid and courseid=$cid";
+  $timestamp = $DB->get_record_sql($q1);
+  $res       = (!empty($timestamp->timeaccess)) ? date('d-m-Y', $timestamp->timeaccess) : '-';
+ }
+ return $res;
 }
 
 function getUserDetail()
@@ -2703,24 +2702,83 @@ function getUserDetail()
 
   $wsfunction = $_POST['wsfunction'];
   $wstoken    = $_POST['wstoken'];
-  $user_id   = $_POST['user_id'];
+  $user_id    = $_POST['user_id'];
 
   $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
-  $params =  array(
-     'field'   => 'id',
-     'values[0]' => $user_id
+  $params = array(
+   'field'     => 'id',
+   'values[0]' => $user_id,
   );
 
   $curl          = new curl();
   $curl_response = $curl->post($server_url, $params);
   if (!empty($curl_response)) {
-   $json_arr = json_decode($curl_response, true);
+   $json_arr         = json_decode($curl_response, true);
    $response->status = 1;
-   $response->info = $json_arr ;
+   $response->info   = $json_arr;
   }
   $arrResults['Data'] = $response;
  }
  return $arrResults;
 
+}
+
+function saveReview()
+{
+
+ global $DB, $CFG;
+
+ $rating = $_POST['rating'];
+
+ if (!empty($rating)) {
+  $courseid                = $_POST['cid'];
+  $newReview               = new stdClass();
+  $newReview->courseid     = $courseid;
+  $newReview->userid       = $_POST['userid'];
+  $newReview->ratingnumber = $rating;
+  $newReview->title        = $_POST['review_headline'];
+  $newReview->comments     = $_POST['reviewDesc'];
+  $newReview->created      = time();
+
+  $res = $DB->insert_record('course_rating', $newReview);
+ }
+ $arrResults['Data'] = $res;
+
+ return $arrResults;
+}
+
+function getReviewsbyCid()
+{
+ global $DB, $CFG;
+ $response = array();
+ $submitedUsersarr= array();
+
+ $cid           = $_POST['cid'];
+ $userid           = $_POST['userid'];
+ $courseratings = $DB->get_records_sql("select * from {course_rating} where courseid = $cid order by id desc ");
+
+ foreach ($courseratings as $courserating) {
+  $Review               = new stdClass();
+  $user                 = $DB->get_record('user', array('id' => $courserating->userid));
+  $submitedUsersarr[]  = $courserating->userid;
+  $Review->username     = $user->firstname . ' ' . $user->lastname;
+  $Review->ratingnumber = $courserating->ratingnumber;
+  $Review->title        = $courserating->title;
+  $Review->comments     = $courserating->comments;
+  $response[]           = $new_data;
+ }
+
+ $arrResults['Data'] = $response;
+
+ if (in_array($userid, $submitedUsersarr))
+ {
+       $arrResults['Data']['submitted'] = 1;
+ }
+ else
+ {
+       $arrResults['Data']['submitted'] = 0;
+ }
+
+ return $arrResults;
 }
