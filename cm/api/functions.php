@@ -2755,7 +2755,7 @@ function getReviewsbyCid()
  $submitedUsersarr= array();
 
  $cid           = $_POST['cid'];
- $userid           = $_POST['userid'];
+ $userid        = $_POST['userid'];
  $courseratings = $DB->get_records_sql("select * from {course_rating} where courseid = $cid order by id desc ");
 
  foreach ($courseratings as $courserating) {
@@ -2766,10 +2766,10 @@ function getReviewsbyCid()
   $Review->ratingnumber = $courserating->ratingnumber;
   $Review->title        = $courserating->title;
   $Review->comments     = $courserating->comments;
-  $response[]           = $new_data;
+  $response[]           = $Review;
  }
 
- $arrResults['Data'] = $response;
+ $arrResults['Data']['response'] = $response;
 
  if (in_array($userid, $submitedUsersarr))
  {
