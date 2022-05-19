@@ -2751,17 +2751,23 @@ function saveReview()
 function getReviewsbyCid()
 {
  global $DB, $CFG;
- $response = array();
- $submitedUsersarr= array();
+ $response         = array();
+ $submitedUsersarr = array();
 
  $cid           = $_POST['cid'];
  $userid        = $_POST['userid'];
  $courseratings = $DB->get_records_sql("select * from {course_rating} where courseid = $cid order by id desc ");
 
+ if (!empty($courseratings)) {
+  $arrResults['Data']['submissions'] = 1;
+ } else {
+  $arrResults['Data']['submissions'] = 0;
+ }
+
  foreach ($courseratings as $courserating) {
   $Review               = new stdClass();
   $user                 = $DB->get_record('user', array('id' => $courserating->userid));
-  $submitedUsersarr[]  = $courserating->userid;
+  $submitedUsersarr[]   = $courserating->userid;
   $Review->username     = $user->firstname . ' ' . $user->lastname;
   $Review->ratingnumber = $courserating->ratingnumber;
   $Review->title        = $courserating->title;
@@ -2771,14 +2777,26 @@ function getReviewsbyCid()
 
  $arrResults['Data']['response'] = $response;
 
- if (in_array($userid, $submitedUsersarr))
- {
-       $arrResults['Data']['submitted'] = 1;
- }
- else
- {
-       $arrResults['Data']['submitted'] = 0;
+ if (in_array($userid, $submitedUsersarr)) {
+  $arrResults['Data']['submitted'] = 1;
+ } else {
+  $arrResults['Data']['submitted'] = 0;
  }
 
+ return $arrResults;
+}
+
+function getMyRating()
+{
+ global $DB, $CFG;
+ $userid        = $_POST['userid'];
+ $cid           = $_POST['cid'];
+ $q             = "select * from {course_rating} where courseid = $cid and userid = $userid  order by id desc";
+ $courseratings = $DB->get_record_sql($q);
+
+ if (!empty($courseratings)) {
+  $arrResults['Data']['ratestr'] = "Rating $courseratings->ratingnumber out of 5";
+  $arrResults['Data']['rating']  = $courseratings->ratingnumber;
+ }
  return $arrResults;
 }
