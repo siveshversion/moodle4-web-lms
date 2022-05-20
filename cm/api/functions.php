@@ -608,9 +608,9 @@ function create_course()
    foreach ($json_arr as $rec) {
     $response->name = $rec['shortname'];
     $response->id   = $rec['id'];
-    $addonData->id  = $response->id ;
+    $addonData->id  = $response->id;
    }
-   $res = update_course_cm_changes($addonData);
+   $res                = update_course_cm_changes($addonData);
    $arrResults['Data'] = $response;
   }
  }
@@ -661,18 +661,29 @@ function get_course_by_id()
   if (!empty($curl_response)) {
    $json_arr = json_decode($curl_response, true);
    foreach ($json_arr as $rec) {
-    $response->fullname     = $rec['fullname'];
-    $response->shortname    = $rec['shortname'];
-    $response->description  = strip_tags($rec['summary']);
-    $response->category     = $rec['categoryid'];
-    $response->topics_cnt   = $rec['numsections'];
-    $response->enrol_method = 'manual';
+    $response->fullname      = $rec['fullname'];
+    $response->shortname     = $rec['shortname'];
+    $response->description   = strip_tags($rec['summary']);
+    $response->category      = $rec['categoryid'];
+    $response->topics_cnt    = $rec['numsections'];
+    $response->enrol_method  = 'manual';
+    $custom_fields_data      = get_course_add_on_datas($course_id);
+    $response->points        = $custom_fields_data->points;
+    $response->course_type   = (int) $custom_fields_data->course_type;
+    $response->duration_hrs  = $custom_fields_data->hours;
+    $response->duration_mins = $custom_fields_data->mints;
    }
    $arrResults['Data'] = $response;
   }
-
  }
  return $arrResults;
+}
+
+function get_course_add_on_datas($course_id)
+{
+ global $DB;
+ $course = $DB->get_record('course', array('id' => $course_id));
+ return $course;
 }
 
 function update_course()
@@ -691,6 +702,15 @@ function update_course()
   $course_summary   = $_POST['course_description'];
   $enrollment_type  = $_POST['enroll_type'];
   $old_enroll_id    = $_POST['old_enroll_id'];
+
+  $addonData               = new stdClass();
+  $addonData->id           = $course_id;
+  $addonData->coursetype   = $_POST['courseType'];
+  $addonData->points       = $_POST['points'];
+  $addonData->durationhrs  = $_POST['durationHrs'];
+  $addonData->durationmins = $_POST['durationMins'];
+
+  update_course_cm_changes($addonData);
 
   if ($enrollment_type == 'self') {
    $enroll_methods = 'Learning self';
