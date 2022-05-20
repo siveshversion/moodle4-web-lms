@@ -569,6 +569,12 @@ function create_course()
   $course_summary   = $_POST['course_description'];
   $enrollment_type  = $_POST['enroll_type'];
 
+  $addonData               = new stdClass();
+  $addonData->coursetype   = $_POST['courseType'];
+  $addonData->points       = $_POST['points'];
+  $addonData->durationhrs  = $_POST['durationHrs'];
+  $addonData->durationmins = $_POST['durationMins'];
+
   if ($enrollment_type == 'self') {
    $enroll_methods = 'Learning self';
   } else if ($enrollment_type == 'admin') {
@@ -596,16 +602,39 @@ function create_course()
 
   $curl          = new curl();
   $curl_response = $curl->post($server_url, $params);
+
   if (!empty($curl_response)) {
    $json_arr = json_decode($curl_response, true);
    foreach ($json_arr as $rec) {
     $response->name = $rec['shortname'];
     $response->id   = $rec['id'];
+    $addonData->id  = $response->id ;
    }
+   $res = update_course_cm_changes($addonData);
    $arrResults['Data'] = $response;
   }
  }
  return $arrResults;
+}
+
+function update_course_cm_changes($params)
+{
+ global $DB, $CFG;
+
+ $arrResults = array();
+
+ if (isset($params)) {
+  $Course              = new stdClass();
+  $Course->id          = $params->id;
+  $Course->course_type = $params->coursetype;
+  $Course->points      = (int) $params->points;
+  $Course->hours       = $params->durationhrs;
+  $Course->mints       = $params->durationmins;
+  $inserted            = $DB->update_record('course', $Course);
+  $arrResults['Data']  = $inserted;
+ }
+ return $arrResults;
+
 }
 
 function get_course_by_id()
