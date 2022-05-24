@@ -2849,3 +2849,128 @@ function getMyRating()
  }
  return $arrResults;
 }
+
+function getPointsReport()
+{
+
+ global $DB, $CFG;
+ $response = array();
+
+ $q   = "select c.id as userid,c.firstname,c.lastname,c.email from {$CFG->prefix}user c where c.deleted=0 and c.id > 2  GROUP BY c.id ";
+ $res = $DB->get_records_sql($q);
+
+ $i = 1;
+ foreach ($res as $rec) {
+  $new_data            = new stdClass();
+  $new_data->slno      = $i;
+  $new_data->userid    = $rec->userid;
+  $new_data->full_name = $rec->firstname . ' ' . $rec->lastname;
+  $new_data->email_id  = $rec->email;
+  $points              = "select sum(b.points) AS points from {$CFG->prefix}cm_user_points b where b.userid = $rec->userid ";
+  $obtained            = $DB->get_record_sql($points);
+  $new_data->points    = $obtained->points;
+  $response[]          = $new_data;
+  ++$i;
+ }
+ $arrResults['Data'] = $response;
+
+ return $arrResults;
+}
+
+function getPointsDetailReport($arrInput)
+{
+ global $CFG, $DB;
+
+ $vUserId    = $arrInput["userid"];
+ $token      = $arrInput["user_key"];
+ $filtertype = $arrInput["selected_filter"];
+
+ $objCategories = $DB->get_records('course_categories');
+
+ $wsfunction = $_POST['wsfunction'];
+ $wstoken    = $_POST['wstoken'];
+
+ //get total course count
+ $vTotalCoursesCount = $DB->count_records_sql("SELECT count(*) as total_courses FROM {$CFG->prefix}course WHERE id > 1 and visible = 1");
+
+ $params             = array('userid' => $vUserId);
+ $server_url         = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+ $curl               = new curl;
+ $resp               = $curl->post($server_url, $params);
+ $arrEnrolledCourses = json_decode($resp, true);
+
+ /*echo '<pre>';
+ print_r($arrEnrolledCourses);
+ echo '</pre>';*/
+
+ foreach ($arrEnrolledCourses as $course) {
+
+  $vCredit = '0.00';
+
+  $arrDummyResults[$course["id"]]['id']           = $course["id"];
+  $arrDummyResults[$course["id"]]['fullname']     = $course["fullname"];
+  $arrDummyResults[$course["id"]]['categoryname'] = $objCategories[$course["category"]]->name;
+  $arrDummyResults[$course["id"]]['category']     = $course["category"];
+
+  if ($course["progress"] == '') {
+   $vProgress = 0;
+  } else {
+   $vProgress = $course["progress"];
+  }
+  $arrDummyResults[$course["id"]]['progress']      = $vProgress;
+  $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
+  $arrDummyResults[$course["id"]]['credits']       = $vCredit;
+
+  $count++;
+ }
+
+ rsort($arrDummyResults);
+
+ $count = 0;
+ foreach ($arrDummyResults as $course) {
+  $progress = round($course["progress"]);
+  if (($filtertype == 'enrolled') || ($filtertype == '')) {
+   $arrResults['Data'][$count]['id']            = $course["id"];
+   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
+   $arrResults['Data'][$count]['category']      = $course["category"];
+   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
+   $arrResults['Data'][$count]['progress']      = $progress;
+   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+   $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['status']        = 1;
+   $count++;
+  } else if (($filtertype == 'completed') && ($progress == 100)) {
+   $arrResults['Data'][$count]['id']            = $course["id"];
+   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
+   $arrResults['Data'][$count]['category']      = $course["category"];
+   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
+   $arrResults['Data'][$count]['progress']      = $progress;
+   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+   $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['status']        = 1;
+   $count++;
+  } else if (($filtertype == 'not_started') && ($progress == 0)) {
+   $arrResults['Data'][$count]['id']            = $course["id"];
+   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
+   $arrResults['Data'][$count]['category']      = $course["category"];
+   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
+   $arrResults['Data'][$count]['progress']      = $progress;
+   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+   $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['status']        = 1;
+   $count++;
+  } else if (($filtertype == 'in_progress') && ($progress > 0) && ($progress < 100)) {
+   $arrResults['Data'][$count]['id']            = $course["id"];
+   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
+   $arrResults['Data'][$count]['category']      = $course["category"];
+   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
+   $arrResults['Data'][$count]['progress']      = $progress;
+   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
+   $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['status']        = 1;
+   $count++;
+  }
+ }
+
+ return $arrResults;
+}
