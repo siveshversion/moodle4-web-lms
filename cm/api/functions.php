@@ -2877,100 +2877,58 @@ function getPointsReport()
  return $arrResults;
 }
 
+function getFullnameById($id)
+{
+ global $DB, $CFG;
+ $fullname = '';
+
+ $objUser = $DB->get_record('user', array("id" => $id));
+
+ if ($objUser) {
+  $fullname = $objUser->firstname . ' ' . $objUser->lastname;
+ }
+ return $fullname;
+}
+
 function getPointsDetailReport($arrInput)
 {
  global $CFG, $DB;
 
- $vUserId    = $arrInput["userid"];
- $token      = $arrInput["user_key"];
- $filtertype = $arrInput["selected_filter"];
+ $vUserId  = $arrInput["userId"];
+ $response = array();
 
- $objCategories = $DB->get_records('course_categories');
+ $objPoints = $DB->get_records_sql("SELECT * FROM {cm_user_points} WHERE userid = $vUserId");
 
- $wsfunction = $_POST['wsfunction'];
- $wstoken    = $_POST['wstoken'];
+ $netPointsObj = $DB->get_record_sql("select sum(b.points) AS points from {$CFG->prefix}cm_user_points b where b.userid = $vUserId");
 
- //get total course count
- $vTotalCoursesCount = $DB->count_records_sql("SELECT count(*) as total_courses FROM {$CFG->prefix}course WHERE id > 1 and visible = 1");
+ $x = 1;
+ foreach ($objPoints as $val) {
+  $ptype = '';
+  $aname = '';
 
- $params             = array('userid' => $vUserId);
- $server_url         = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
- $curl               = new curl;
- $resp               = $curl->post($server_url, $params);
- $arrEnrolledCourses = json_decode($resp, true);
-
- /*echo '<pre>';
- print_r($arrEnrolledCourses);
- echo '</pre>';*/
-
- foreach ($arrEnrolledCourses as $course) {
-
-  $vCredit = '0.00';
-
-  $arrDummyResults[$course["id"]]['id']           = $course["id"];
-  $arrDummyResults[$course["id"]]['fullname']     = $course["fullname"];
-  $arrDummyResults[$course["id"]]['categoryname'] = $objCategories[$course["category"]]->name;
-  $arrDummyResults[$course["id"]]['category']     = $course["category"];
-
-  if ($course["progress"] == '') {
-   $vProgress = 0;
-  } else {
-   $vProgress = $course["progress"];
+  if (($val->point_type == 1) && (!empty($val->point_refid))) {
+   $ptype      = "Course";
+   $coursename = $DB->get_record_sql("select fullname from {course} where id= $val->point_refid ");
+   $aname      = ucfirst($coursename->fullname);
+  } else if (($val->point_type == 2) && (!empty($val->point_refid))) {
+   $ptype   = "Learning Plan";
+   $lpnames = $DB->get_record_sql("select lpname from {cm_admin_learning_path} where id= $val->point_refid ");
+   $aname   = ucfirst($lpnames->lpname);
   }
-  $arrDummyResults[$course["id"]]['progress']      = $vProgress;
-  $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
-  $arrDummyResults[$course["id"]]['credits']       = $vCredit;
 
-  $count++;
- }
-
- rsort($arrDummyResults);
-
- $count = 0;
- foreach ($arrDummyResults as $course) {
-  $progress = round($course["progress"]);
-  if (($filtertype == 'enrolled') || ($filtertype == '')) {
-   $arrResults['Data'][$count]['id']            = $course["id"];
-   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
-   $arrResults['Data'][$count]['category']      = $course["category"];
-   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
-   $arrResults['Data'][$count]['progress']      = $progress;
-   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
-   $arrResults['Data'][$count]['credits']       = $course["credits"];
-   $arrResults['Data'][$count]['status']        = 1;
-   $count++;
-  } else if (($filtertype == 'completed') && ($progress == 100)) {
-   $arrResults['Data'][$count]['id']            = $course["id"];
-   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
-   $arrResults['Data'][$count]['category']      = $course["category"];
-   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
-   $arrResults['Data'][$count]['progress']      = $progress;
-   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
-   $arrResults['Data'][$count]['credits']       = $course["credits"];
-   $arrResults['Data'][$count]['status']        = 1;
-   $count++;
-  } else if (($filtertype == 'not_started') && ($progress == 0)) {
-   $arrResults['Data'][$count]['id']            = $course["id"];
-   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
-   $arrResults['Data'][$count]['category']      = $course["category"];
-   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
-   $arrResults['Data'][$count]['progress']      = $progress;
-   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
-   $arrResults['Data'][$count]['credits']       = $course["credits"];
-   $arrResults['Data'][$count]['status']        = 1;
-   $count++;
-  } else if (($filtertype == 'in_progress') && ($progress > 0) && ($progress < 100)) {
-   $arrResults['Data'][$count]['id']            = $course["id"];
-   $arrResults['Data'][$count]['fullname']      = $course["fullname"];
-   $arrResults['Data'][$count]['category']      = $course["category"];
-   $arrResults['Data'][$count]['categoryname']  = $course["categoryname"];
-   $arrResults['Data'][$count]['progress']      = $progress;
-   $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
-   $arrResults['Data'][$count]['credits']       = $course["credits"];
-   $arrResults['Data'][$count]['status']        = 1;
-   $count++;
+  if ($aname) {
+   $new_data                     = new stdClass();
+   $new_data->slno               = $x;
+   $new_data->ptype              = $ptype;
+   $new_data->aname              = $aname;
+   $new_data->points             = $val->points;
+   $response[]                   = $new_data;
+   $arrResults['Data']['exists'] = 1;
+   ++$x;
   }
  }
-
+ $arrResults['Data']['courseAlike'] = $response;
+ $arrResults['Data']['totalPoints'] = $netPointsObj->points;
+ $arrResults['Data']['fullname']    = getFullnameById($vUserId);
  return $arrResults;
 }
