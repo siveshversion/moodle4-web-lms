@@ -1641,8 +1641,16 @@ function get_bu_by_id()
 function updateBU()
 {
  global $DB, $CFG;
- $bu_name = $_POST["bu_name"];
- $bu_id   = $_POST["bu_id"];
+ $bu_name      = $_POST["bu_name"];
+ $bu_id        = $_POST["bu_id"];
+ $logo_file    = $_POST['logoFile'];
+ $logoFileName = $_POST['logoFileName'];
+
+ if ((isset($logo_file)) && (!empty($logoFileName))) {
+  $BU->logo_img_name = $logoFileName;
+  logo_upload($logo_file, $logoFileName, $bu_id);
+ }
+
  if (isset($bu_id)) {
   $BU->id             = $bu_id;
   $BU->bu_name        = $bu_name;
@@ -1651,6 +1659,7 @@ function updateBU()
   $inserted           = $DB->update_record('cm_business_units', $BU);
   $arrResults['Data'] = $inserted;
  }
+
  return $arrResults;
 }
 
