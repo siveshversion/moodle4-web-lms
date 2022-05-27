@@ -40,7 +40,6 @@ function validateLogin($arrInput)
  $vUsernameExits = $DB->get_record_sql($query);
 
  if ($vUsernameExits->id == '') {
-
   $query          = "select id from {$CFG->prefix}user where username like '$vUsername'";
   $vUsernameExits = $DB->get_record_sql($query);
  }
@@ -96,6 +95,12 @@ function validateLogin($arrInput)
 
     $vRole = 'student';
    }
+
+   // fix lastaccess for pwa login
+   $loggedinUser             = new stdClass();
+   $loggedinUser->id         = $objUser->id;
+   $loggedinUser->lastaccess = time();
+   $DB->update_record('user', $loggedinUser);
 
    $arrResults['Data']['result']    = 1;
    $arrResults['Data']['message']   = 'Success';
