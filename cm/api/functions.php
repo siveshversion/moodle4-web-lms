@@ -2946,3 +2946,38 @@ function getPointsDetailReport($arrInput)
  $arrResults['Data']['fullname']    = getFullnameById($vUserId);
  return $arrResults;
 }
+
+function getLeaderboardPoints()
+{
+ global $DB, $CFG;
+ $userid   = $_POST['userid'];
+ $response = array();
+
+ $user           = $DB->get_record('user', array("id" => $userid));
+ $BU             = getBuByUid($userid);
+ $user->cm_bu_id = $BU->id;
+
+ $assigned_userids_arr = getBUAssignedUsers($BU->id);
+
+ $userids = implode(',', $assigned_userids_arr);
+
+ $siteAdmin = checkisSiteAdmin($vUsernameExits->id);
+
+ if ($siteAdmin) {
+  $topupoints = $DB->get_records_sql("SELECT id,userid,sum(points) as points FROM {$CFG->prefix}cm_user_points where group by userid order by points DESC limit 0,6");
+ } else {
+  $topupoints = $DB->get_records_sql("SELECT id,userid,sum(points) as points FROM {$CFG->prefix}cm_user_points where userid in ($userids) group by userid order by points DESC limit 0,6");
+ }
+
+ foreach ($topupoints as $prec) {
+  $objUser              = $DB->get_record('user', array("id" => $prec->userid));
+  $new_data             = new stdClass();
+  $new_data->firstname  = $objUser->firstname;
+  $usercontext          = context_user::instance($prec->userid, IGNORE_MISSING);
+  $new_data->profilepic = $CFG->wwwroot . '/pluginfile.php' . '/' . $usercontext->id . '/user/icon/f1';
+  $new_data->points     = $prec->points;
+  $response[]           = $new_data;
+ }
+ $arrResults['Data'] = $response;
+ return $arrResults; 
+}
