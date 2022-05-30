@@ -2969,15 +2969,20 @@ function getLeaderboardPoints()
   $topupoints = $DB->get_records_sql("SELECT id,userid,sum(points) as points FROM {$CFG->prefix}cm_user_points where userid in ($userids) group by userid order by points DESC limit 0,6");
  }
 
- foreach ($topupoints as $prec) {
-  $objUser              = $DB->get_record('user', array("id" => $prec->userid));
-  $new_data             = new stdClass();
-  $new_data->firstname  = $objUser->firstname;
-  $usercontext          = context_user::instance($prec->userid, IGNORE_MISSING);
-  $new_data->profilepic = $CFG->wwwroot . '/pluginfile.php' . '/' . $usercontext->id . '/user/icon/f1';
-  $new_data->points     = $prec->points;
-  $response[]           = $new_data;
+ if (empty($topupoints)) {
+  $arrResults['Data']['empty'] = true;
  }
- $arrResults['Data'] = $response;
- return $arrResults; 
+
+ foreach ($topupoints as $prec) {
+  $objUser                     = $DB->get_record('user', array("id" => $prec->userid));
+  $new_data                    = new stdClass();
+  $new_data->firstname         = $objUser->firstname;
+  $usercontext                 = context_user::instance($prec->userid, IGNORE_MISSING);
+  $new_data->profilepic        = $CFG->wwwroot . '/pluginfile.php' . '/' . $usercontext->id . '/user/icon/f1';
+  $new_data->points            = $prec->points;
+  $response[]                  = $new_data;
+  $arrResults['Data']['empty'] = false;
+ }
+ $arrResults['Data']['userpoints'] = $response;
+ return $arrResults;
 }
