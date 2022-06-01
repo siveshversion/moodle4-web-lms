@@ -2986,3 +2986,39 @@ function getLeaderboardPoints()
  $arrResults['Data']['userpoints'] = $response;
  return $arrResults;
 }
+
+function getBadges()
+{
+ global $DB, $CFG;
+ $userid   = $_POST['userid'];
+ $response = array();
+ require_once $CFG->libdir . '/badgeslib.php';
+
+ $q = "SELECT c.id FROM {course} c JOIN {enrol} en ON en.courseid = c.id
+    JOIN {user_enrolments} ue ON ue.enrolid = en.id WHERE ue.userid = $userid";
+
+ $enrolled_c = $DB->get_records_sql($q);
+
+ foreach ($enrolled_c as $course) {
+  $badges_res = badges_get_badges(2, $course->id, '', '', 0, 0, $userid);
+  foreach ($badges_res as $badges) {
+   $badges_arr[] = $badges;
+  }
+
+ }
+
+ if (empty($badges_arr)) {
+  $arrResults['Data']['empty'] = true;
+ }
+
+ foreach ($badges_arr as $prec) {
+  $new_data                    = new stdClass();
+  $new_data->name              = $prec->name;
+  $context                     = context_course::instance($prec->courseid);
+  $new_data->badgeimg          = $CFG->wwwroot . '/pluginfile.php' . '/' . $context->id . '/badges/badgeimage/' . $prec->id . '/f1';
+  $response[]                  = $new_data;
+  $arrResults['Data']['empty'] = false;
+ }
+ $arrResults['Data']['badges'] = $response;
+ return $arrResults;
+}
