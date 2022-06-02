@@ -3004,7 +3004,6 @@ function getBadges()
   foreach ($badges_res as $badges) {
    $badges_arr[] = $badges;
   }
-
  }
 
  if (empty($badges_arr)) {
@@ -3020,5 +3019,33 @@ function getBadges()
   $arrResults['Data']['empty'] = false;
  }
  $arrResults['Data']['badges'] = $response;
+ return $arrResults;
+}
+
+function getCerts()
+{
+ global $DB, $CFG;
+ $userid   = $_POST['userid'];
+ $response = array();
+ require_once $CFG->libdir . '/badgeslib.php';
+
+ $q = "SELECT cert.id as certid,cert.name as certname,(SELECT c.fullname as coursename FROM {course} c WHERE c.id = course)
+ AS fullname,course as cid   FROM {customcert} as cert WHERE id IN (SELECT customcertid from {customcert_issues} WHERE userid=$userid
+  order by timecreated DESC)";
+
+ $objMycert = $DB->get_records_sql($q);
+
+ if (empty($objMycert)) {
+  $arrResults['Data']['empty'] = true;
+ }
+
+ foreach ($objMycert as $cert) {
+  $new_data                    = new stdClass();
+  $new_data->name              = $cert->certname;
+  $new_data->certimg           = $CFG->wwwroot . '/cm/image/courseera.png';
+  $response[]                  = $new_data;
+  $arrResults['Data']['empty'] = false;
+ }
+ $arrResults['Data']['certs'] = $response;
  return $arrResults;
 }
