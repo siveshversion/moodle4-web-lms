@@ -33,18 +33,22 @@ function validateLogin($arrInput)
  $vUsername = $arrInput['username'];
  $vPassword = $arrInput['password'];
 
+ $msg = 'Username / Password is wrong.Please enter the correct credentials';
+
  // $vUsername = 'admin';
  // $vPassword = 'Learn@123';
 
  $query          = "select id from {$CFG->prefix}user where username like BINARY '$vUsername'";
  $vUsernameExits = $DB->get_record_sql($query);
 
- if ($vUsernameExits->id == '') {
-  $query          = "select id from {$CFG->prefix}user where username like '$vUsername'";
-  $vUsernameExits = $DB->get_record_sql($query);
- }
-
- if ($vUsernameExits->id != '') {
+ if (!empty($vUsernameExits->id)) {
+  $query   = "select suspended,deleted from {$CFG->prefix}user where id = $vUsernameExits->id";
+  $userRec = $DB->get_record_sql($query);
+  if ($userRec->suspended == 1) {
+   $msg = 'Your account has been suspended.Please contact your administrator';
+  } else if ($userRec->deleted == 1) {
+   $msg = 'Your account has been deleted.Please contact your administrator';
+  }
 
   $restformat = 'json';
 
@@ -102,8 +106,10 @@ function validateLogin($arrInput)
    $loggedinUser->lastaccess = time();
    $DB->update_record('user', $loggedinUser);
 
+   $msg = 'Success';
+
    $arrResults['Data']['result']    = 1;
-   $arrResults['Data']['message']   = 'Success';
+   $arrResults['Data']['message']   = $msg;
    $arrResults['Data']['token']     = $arrToken[token];
    $arrResults['Data']['userid']    = $objUser->id;
    $arrResults['Data']['email']     = $objUser->email;
@@ -117,13 +123,12 @@ function validateLogin($arrInput)
   } else {
    $arrResults['Data']['result']  = 0;
    $arrResults['Data']['token']   = '';
-   $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+   $arrResults['Data']['message'] = $msg;
   }
-
  } else {
   $arrResults['Data']['result']  = 0;
   $arrResults['Data']['token']   = '';
-  $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+  $arrResults['Data']['message'] = $msg;
  }
 
  return $arrResults;
@@ -143,7 +148,7 @@ function getUserList()
 
   $q = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
              from {$CFG->prefix}user u where u.deleted = 0 and u.id > 1 and
-             u.id NOT IN($siteadmins)";
+             u.id NOT IN($siteadmins) order by u.id DESC";
 
   $res = $DB->get_records_sql($q);
 
@@ -1686,7 +1691,7 @@ function listBU()
   }
   $q1                       = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$rec->id";
   $res                      = $DB->get_record_sql($q1);
-  $q2                       = "SELECT count(Distinct(userid)) as usercnt FROM {$CFG->prefix}cm_bu_assignment where bu_id=$rec->id";
+  $q2                       = "SELECT count(id) as usercnt FROM {$CFG->prefix}user where id in (select Distinct(userid) from {$CFG->prefix}cm_bu_assignment where bu_id=$rec->id) and deleted=0 and suspended=0";
   $rec                      = $DB->get_record_sql($q2);
   $new_data->bu_courses_cnt = $res->coursecnt;
   $new_data->bu_users_cnt   = $rec->usercnt;
@@ -2467,19 +2472,22 @@ function generate_get_user_token($arrInput)
  $vUsername = $arrInput['username'];
  $vPassword = $arrInput['password'];
 
+ $msg = 'Username / Password is wrong.Please enter the correct credentials';
+
  // $vUsername = 'admin';
  // $vPassword = 'Learn@123';
 
  $query          = "select id from {$CFG->prefix}user where username like BINARY '$vUsername'";
  $vUsernameExits = $DB->get_record_sql($query);
 
- if ($vUsernameExits->id == '') {
-
-  $query          = "select id from {$CFG->prefix}user where username like '$vUsername'";
-  $vUsernameExits = $DB->get_record_sql($query);
- }
-
- if ($vUsernameExits->id != '') {
+ if (!empty($vUsernameExits->id)) {
+  $query   = "select suspended,deleted from {$CFG->prefix}user where id = $vUsernameExits->id";
+  $userRec = $DB->get_record_sql($query);
+  if ($userRec->suspended == 1) {
+   $msg = 'Your account has been suspended.Please contact your administrator';
+  } else if ($userRec->deleted == 1) {
+   $msg = 'Your account has been deleted.Please contact your administrator';
+  }
 
   $restformat = 'json';
 
@@ -2531,8 +2539,16 @@ function generate_get_user_token($arrInput)
     $vRole = 'student';
    }
 
+   // fix lastaccess for pwa login
+   $loggedinUser             = new stdClass();
+   $loggedinUser->id         = $objUser->id;
+   $loggedinUser->lastaccess = time();
+   $DB->update_record('user', $loggedinUser);
+
+   $msg = 'Success';
+
    $arrResults['Data']['result']    = 1;
-   $arrResults['Data']['message']   = 'Success';
+   $arrResults['Data']['message']   = $msg;
    $arrResults['Data']['token']     = $arrToken[token];
    $arrResults['Data']['userid']    = $objUser->id;
    $arrResults['Data']['email']     = $objUser->email;
@@ -2546,13 +2562,12 @@ function generate_get_user_token($arrInput)
   } else {
    $arrResults['Data']['result']  = 0;
    $arrResults['Data']['token']   = '';
-   $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+   $arrResults['Data']['message'] = $msg;
   }
-
  } else {
   $arrResults['Data']['result']  = 0;
   $arrResults['Data']['token']   = '';
-  $arrResults['Data']['message'] = 'Username / Password is wrong, please enter the correct details';
+  $arrResults['Data']['message'] = $msg;
  }
 
  return $arrResults;
