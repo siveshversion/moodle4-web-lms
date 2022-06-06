@@ -88,8 +88,12 @@ function validateLogin($arrInput)
    }
    $siteAdmin = checkisSiteAdmin($vUsernameExits->id);
 
+   $BuAdmin = checkisBUAdmin($vUsernameExits->id);
+
    if ($siteAdmin) {
     $vRole = 'admin';
+   } else if($BuAdmin) {
+       $vRole = 'manager';   
    } else {
     //check whether the user has the student role
     $vLearners = 0;
@@ -2274,6 +2278,14 @@ function checkisSiteAdmin($userId)
  $siteadmins      = explode(',', $CFG->siteadmins);
  $siteAdmin       = in_array($userId, $siteadmins);
  return $siteAdmin;
+}
+
+function checkisBUAdmin($userId)
+{
+ global $CFG,$DB;
+ $rec = $DB->get_record('cm_bu_admins',array("userid"=>$userId));
+ $buAdmin = (!empty($rec))?true: false;
+ return $buAdmin;
 }
 
 function courseDetailedReport()
