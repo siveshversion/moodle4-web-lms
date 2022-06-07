@@ -92,8 +92,8 @@ function validateLogin($arrInput)
 
    if ($siteAdmin) {
     $vRole = 'admin';
-   } else if($BuAdmin) {
-       $vRole = 'manager';   
+   } else if ($BuAdmin) {
+    $vRole = 'manager';
    } else {
     //check whether the user has the student role
     $vLearners = 0;
@@ -2282,9 +2282,9 @@ function checkisSiteAdmin($userId)
 
 function checkisBUAdmin($userId)
 {
- global $CFG,$DB;
- $rec = $DB->get_record('cm_bu_admins',array("userid"=>$userId));
- $buAdmin = (!empty($rec))?true: false;
+ global $CFG, $DB;
+ $rec     = $DB->get_record('cm_bu_admins', array("userid" => $userId));
+ $buAdmin = (!empty($rec)) ? true : false;
  return $buAdmin;
 }
 
@@ -3074,5 +3074,57 @@ function getCerts()
   $arrResults['Data']['empty'] = false;
  }
  $arrResults['Data']['certs'] = $response;
+ return $arrResults;
+}
+
+function getBUadminDashStats()
+{
+ global $DB, $CFG;
+
+ $user_id    = $_POST["userid"];
+ $BU         = getBuByUid($user_id);
+ $wsfunction = $_POST['wsfunction'];
+
+ if (isset($_POST["wstoken"])) {
+
+  $q1                       = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$BU->id";
+  $res                      = $DB->get_record_sql($q1);
+  $q2                       = "SELECT count(id) as usercnt FROM {$CFG->prefix}user where id in (select Distinct(userid) from {$CFG->prefix}cm_bu_assignment where bu_id=$BU->id) and deleted=0 and suspended=0";
+  $rec                      = $DB->get_record_sql($q2);
+  $new_data->bu_courses_cnt = $res->coursecnt;
+  $new_data->bu_users_cnt   = $rec->usercnt;
+
+  $q3  = "SELECT count(id) as lpscount FROM {$CFG->prefix}cm_admin_learning_path";
+  $lps = $DB->get_record_sql($q3);
+
+  $q4  = "SELECT count(id) as buscount FROM {$CFG->prefix}cm_business_units";
+  $bus = $DB->get_record_sql($q4);
+
+  $arrResults['Data']['usersCount']   = $new_data->bu_users_cnt;
+  $arrResults['Data']['coursesCount'] = $new_data->bu_courses_cnt;
+  $arrResults['Data']['buName']       = $BU->bu_name;
+  $arrResults['Data']['lpsCount']     = $lps->lpscount;
+
+  // start of user enrolled_courses fetching
+  $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+  $params = array('userid' => $vUserId);
+
+  $curl      = new curl;
+  $resp      = $curl->post($server_url, $params);
+  $arrOutput = json_decode($resp, true);
+
+  $vEnrolledCount   = 0;
+  $vCompletedCount  = 0;
+  $vInprogressCount = 0;
+  $vNotstartedCount = 0;
+  foreach ($arrOutput as $course) {
+   $vEnrolledCount++;
+   if ($course[progress] == 100) {
+    $vCompletedCount++;
+   }
+  }
+  $arrResults['Data']['enCoursesCnt'] = $vEnrolledCount;
+ }
  return $arrResults;
 }
