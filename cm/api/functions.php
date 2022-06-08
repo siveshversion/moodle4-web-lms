@@ -93,7 +93,10 @@ function validateLogin($arrInput)
    if ($siteAdmin) {
     $vRole = 'admin';
    } else if ($BuAdmin) {
-    $vRole = 'manager';
+    $vRole                        = 'manager';
+    $BU                           = getBuByUid($objUser->id);
+    $arrResults['Data']['buId']   = $BU->id;
+    $arrResults['Data']['buName'] = $BU->bu_name;
    } else {
     //check whether the user has the student role
     $vLearners = 0;
@@ -1182,6 +1185,9 @@ function listLP()
 {
  global $DB, $CFG;
  $response = array();
+ if (isset($_POST['buId'])) {
+  $buId        = $_POST['buId'];
+ }
  if (isset($_POST['userId'])) {
   $q   = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active'";
   $lps = $DB->get_records_sql($q);
@@ -2057,7 +2063,11 @@ function LpCourseSorting()
 function courseReport()
 {
  global $DB, $CFG;
- $userId    = $_POST['userId'];
+ $userId = $_POST['userId'];
+ $buId   = $_POST['buId'];
+ if (!empty($buId)) {
+  $courseids_in = getBuCoursesByUid($buId);
+ }
  $response  = array();
  $siteAdmin = checkisSiteAdmin($userId);
 
@@ -2067,6 +2077,9 @@ function courseReport()
 
  if ($siteAdmin) {
   $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1";
+  $courses = $DB->get_records_sql($q1);
+ } else if ($buId) {
+  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1 and c.id in($courseids_in)";
   $courses = $DB->get_records_sql($q1);
  } else {
   $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1";
@@ -2478,111 +2491,7 @@ function get_cids_progress($userId, $u, $progress_rate)
 
 function generate_get_user_token($arrInput)
 {
-
- global $CFG, $DB;
-
- $vUsername = $arrInput['username'];
- $vPassword = $arrInput['password'];
-
- $msg = 'Username / Password is wrong.Please enter the correct credentials';
-
- // $vUsername = 'admin';
- // $vPassword = 'Learn@123';
-
- $query          = "select id from {$CFG->prefix}user where username like BINARY '$vUsername'";
- $vUsernameExits = $DB->get_record_sql($query);
-
- if (!empty($vUsernameExits->id)) {
-  $query   = "select suspended,deleted from {$CFG->prefix}user where id = $vUsernameExits->id";
-  $userRec = $DB->get_record_sql($query);
-  if ($userRec->suspended == 1) {
-   $msg = 'Your account has been suspended.Please contact your administrator';
-  } else if ($userRec->deleted == 1) {
-   $msg = 'Your account has been deleted.Please contact your administrator';
-  }
-
-  $restformat = 'json';
-
-  $params = array('username' => $vUsername, 'password' => $vPassword);
-
-  $server_url = $CFG->wwwroot . '/login/token.php?service=moodle_mobile_app';
-
-  $curl       = new curl;
-  $restformat = ($restformat == 'json') ? '&moodlewsrestformat=' . $restformat : '';
-
-  $resp = $curl->post($server_url . $restformat, $params);
-
-  $arrToken = json_decode($resp, true);
-
-  if ($arrToken[token] != '') {
-
-   //get userid from username
-   $objUser = $DB->get_record('user', array("username" => $vUsername));
-
-   //update token in user key auth plugin tables
-   $vMoodleToken = $arrToken[token];
-   $vUserId      = $objUser->id;
-
-   $objUserKey = $DB->get_record('user_private_key', array('userid' => $vUserId, 'script' => 'auth/userkey'));
-
-   if ($objUserKey->id != '') {
-
-    $DB->set_field('user_private_key', 'value', $vMoodleToken, array('userid' => $vUserId, 'script' => 'auth/userkey'));
-   } else {
-    $objUserAuth              = new stdClass();
-    $objUserAuth->script      = 'auth/userkey';
-    $objUserAuth->value       = $vMoodleToken;
-    $objUserAuth->userid      = $vUserId;
-    $objUserAuth->timecreated = time();
-    $DB->insert_record('user_private_key', $objUserAuth);
-
-   }
-   $siteAdmin = checkisSiteAdmin($vUsernameExits->id);
-
-   if ($siteAdmin) {
-    $vRole = 'admin';
-   } else {
-    //check whether the user has the student role
-    $vLearners = 0;
-    $query     = "SELECT id FROM {$CFG->prefix}role_assignments WHERE roleid = 5
-                            and userid = $objUser->id group by roleid";
-    $objInstructorsRoles = $DB->get_records_sql($query);
-
-    $vRole = 'student';
-   }
-
-   // fix lastaccess for pwa login
-   $loggedinUser             = new stdClass();
-   $loggedinUser->id         = $objUser->id;
-   $loggedinUser->lastaccess = time();
-   $DB->update_record('user', $loggedinUser);
-
-   $msg = 'Success';
-
-   $arrResults['Data']['result']    = 1;
-   $arrResults['Data']['message']   = $msg;
-   $arrResults['Data']['token']     = $arrToken[token];
-   $arrResults['Data']['userid']    = $objUser->id;
-   $arrResults['Data']['email']     = $objUser->email;
-   $arrResults['Data']['firstname'] = $objUser->firstname;
-   $arrResults['Data']['lastname']  = $objUser->lastname;
-   $arrResults['Data']['surname']   = $objUser->lastname;
-   $arrResults['Data']['country']   = $objUser->country;
-   $arrResults['Data']['city']      = $objUser->city;
-   $arrResults['Data']['phone1']    = $objUser->phone1;
-   $arrResults['Data']['role']      = $vRole;
-  } else {
-   $arrResults['Data']['result']  = 0;
-   $arrResults['Data']['token']   = '';
-   $arrResults['Data']['message'] = $msg;
-  }
- } else {
-  $arrResults['Data']['result']  = 0;
-  $arrResults['Data']['token']   = '';
-  $arrResults['Data']['message'] = $msg;
- }
-
- return $arrResults;
+ return validateLogin($arrInput);
 }
 
 function userCourseReport()
@@ -3082,14 +2991,14 @@ function getBUadminDashStats()
  global $DB, $CFG;
 
  $user_id    = $_POST["userid"];
- $BU         = getBuByUid($user_id);
  $wsfunction = $_POST['wsfunction'];
+ $buId       = $_POST['buId'];
 
  if (isset($_POST["wstoken"])) {
 
-  $q1                       = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id=$BU->id";
+  $q1                       = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id= $buId ";
   $res                      = $DB->get_record_sql($q1);
-  $q2                       = "SELECT count(id) as usercnt FROM {$CFG->prefix}user where id in (select Distinct(userid) from {$CFG->prefix}cm_bu_assignment where bu_id=$BU->id) and deleted=0 and suspended=0";
+  $q2                       = "SELECT count(id) as usercnt FROM {$CFG->prefix}user where id in (select Distinct(userid) from {$CFG->prefix}cm_bu_assignment where bu_id=$buId) and deleted=0 and suspended=0";
   $rec                      = $DB->get_record_sql($q2);
   $new_data->bu_courses_cnt = $res->coursecnt;
   $new_data->bu_users_cnt   = $rec->usercnt;
@@ -3102,7 +3011,6 @@ function getBUadminDashStats()
 
   $arrResults['Data']['usersCount']   = $new_data->bu_users_cnt;
   $arrResults['Data']['coursesCount'] = $new_data->bu_courses_cnt;
-  $arrResults['Data']['buName']       = $BU->bu_name;
   $arrResults['Data']['lpsCount']     = $lps->lpscount;
 
   // start of user enrolled_courses fetching
@@ -3127,4 +3035,17 @@ function getBUadminDashStats()
   $arrResults['Data']['enCoursesCnt'] = $vEnrolledCount;
  }
  return $arrResults;
+}
+
+function getBuCoursesByUid($buId)
+{
+ global $DB, $CFG;
+ $courseids_arr = array();
+ $q             = "SELECT DISTINCT(bu_courseid)as courseid FROM {cm_bu_course} where bu_id = $buId";
+ $courses       = $DB->get_records_sql($q);
+ foreach ($courses as $rec) {
+  $courseids_arr[] = $rec->courseid;
+ }
+ $courseids_in = implode(',', $courseids_arr);
+ return $courseids_in;
 }
