@@ -144,6 +144,14 @@ function validateLogin($arrInput)
 function getUserList()
 {
  global $DB, $CFG;
+ $append_query = '';
+ $bu_id        = $_POST['buId'];
+
+ if (!empty($bu_id)) {
+  $assigned_userids_arr = getBUAssignedUsers($bu_id);
+  $userids              = implode(',', $assigned_userids_arr);
+  $append_query         = "AND u.id in($userids)";
+ }
 
  if (isset($_POST["wstoken"])) {
 
@@ -155,7 +163,7 @@ function getUserList()
 
   $q = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
              from {$CFG->prefix}user u where u.deleted = 0 and u.id > 1 and
-             u.id NOT IN($siteadmins) order by u.id DESC";
+             u.id NOT IN($siteadmins) $append_query order by u.id DESC";
 
   $res = $DB->get_records_sql($q);
 
@@ -524,7 +532,10 @@ function updateCategory()
 function listCourses()
 {
  global $DB, $CFG;
- $response = array();
+ $response     = array();
+ $append_query = '';
+ $bu_id        = $_POST['buId'];
+
  if (isset($_POST['catId'])) {
   $catId = $_POST['catId'];
  }
@@ -537,7 +548,14 @@ function listCourses()
  $moodledata->wstoken    = $wstoken;
 
  if (isset($_POST['userId'])) {
-  $q       = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+
+  if (!empty($bu_id)) {
+   $assigned_courses = getBuCourses($bu_id);
+   $q = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses)";
+  } else {
+   $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+  }
+
   $courses = $DB->get_records_sql($q);
   $i       = 1;
   foreach ($courses as $rec) {
@@ -1173,8 +1191,11 @@ function createLP()
   $LP->enddate      = null;
   $LP->lpimage      = null;
   $LP->lastmodified = time();
-  $LP->creator      = $_POST['lp_creator_id'];
-  $inserted         = insert_lpdetails($LP);
+  if (isset($_POST["buId"])) {
+   $LP->buid = (int) $_POST['buId'];
+  }
+  $LP->creator = $_POST['lp_creator_id'];
+  $inserted    = insert_lpdetails($LP);
 
   $arrResults['Data'] = $inserted;
  }
@@ -1184,12 +1205,14 @@ function createLP()
 function listLP()
 {
  global $DB, $CFG;
- $response = array();
+ $response     = array();
+ $append_query = '';
  if (isset($_POST['buId'])) {
-  $buId        = $_POST['buId'];
+  $buId         = $_POST['buId'];
+  $append_query = "AND buid = $buId";
  }
  if (isset($_POST['userId'])) {
-  $q   = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active'";
+  $q   = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active' $append_query";
   $lps = $DB->get_records_sql($q);
   foreach ($lps as $rec) {
    $new_data                 = new stdClass();
@@ -2066,7 +2089,7 @@ function courseReport()
  $userId = $_POST['userId'];
  $buId   = $_POST['buId'];
  if (!empty($buId)) {
-  $courseids_in = getBuCoursesByUid($buId);
+  $courseids_in = getBuCourses($buId);
  }
  $response  = array();
  $siteAdmin = checkisSiteAdmin($userId);
@@ -3037,7 +3060,7 @@ function getBUadminDashStats()
  return $arrResults;
 }
 
-function getBuCoursesByUid($buId)
+function getBuCourses($buId)
 {
  global $DB, $CFG;
  $courseids_arr = array();
@@ -3048,4 +3071,19 @@ function getBuCoursesByUid($buId)
  }
  $courseids_in = implode(',', $courseids_arr);
  return $courseids_in;
+}
+
+function DeleteLP()
+{
+ global $DB, $CFG;
+ $lp_id = $_POST['lp_id'];
+
+ if (!empty($lp_id)) {
+  $DB->delete_records('cm_admin_learning_path', array("id" => $lp_id));
+  $DB->delete_records('cm_lp_assignment', array("lp_id" => $lp_id));
+  $DB->delete_records('cm_lp_completion_stauts', array("lp_id" => $lp_id));
+  $DB->delete_records('cm_lp_course', array("lp_id" => $lp_id));
+  $arrResults['Data'] = 1;
+ }
+ return $arrResults;
 }
