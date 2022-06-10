@@ -147,7 +147,7 @@ function getUserList()
  $append_query = '';
  $bu_id        = $_POST['buId'];
 
- if (!empty($bu_id)) {
+ if (!empty($bu_id) && ($bu_id != 'null')) {
   $assigned_userids_arr = getBUAssignedUsers($bu_id);
   $userids              = implode(',', $assigned_userids_arr);
   $append_query         = "AND u.id in($userids)";
@@ -551,7 +551,7 @@ function listCourses()
 
   if (!empty($bu_id)) {
    $assigned_courses = getBuCourses($bu_id);
-   $q = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses)";
+   $q                = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses)";
   } else {
    $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
   }
