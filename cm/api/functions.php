@@ -150,7 +150,9 @@ function getUserList()
  if (!empty($bu_id) && ($bu_id != 'null')) {
   $assigned_userids_arr = getBUAssignedUsers($bu_id);
   $userids              = implode(',', $assigned_userids_arr);
-  $append_query         = "AND u.id in($userids)";
+  if (!empty($userids)) {
+   $append_query = "AND u.id in($userids)";
+  }
  }
 
  if (isset($_POST["wstoken"])) {
@@ -548,8 +550,7 @@ function listCourses()
  $moodledata->wstoken    = $wstoken;
 
  if (isset($_POST['userId'])) {
-
-  if (!empty($bu_id)) {
+  if (!empty($bu_id) && ($bu_id != 'null')) {
    $assigned_courses = getBuCourses($bu_id);
    $q                = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses)";
   } else {
@@ -597,6 +598,7 @@ function create_course()
  if (isset($_POST['wsfunction'])) {
   $wsfunction = $_POST['wsfunction'];
   $wstoken    = $_POST['wstoken'];
+  $bu_id      = $_POST['bu_id'];
 
   $course_category  = $_POST['course_category'];
   $course_name      = $_POST['course_full_name'];
@@ -645,7 +647,14 @@ function create_course()
     $response->id   = $rec['id'];
     $addonData->id  = $response->id;
    }
-   $res                = update_course_cm_changes($addonData);
+   $res = update_course_cm_changes($addonData);
+   if (!empty($bu_id) && ($bu_id != 'null')) {
+    $params            = new stdClass();
+    $params->bu_id     = $_POST['bu_id'];
+    $params->userId    = $_POST['userId'];
+    $params->course_id = $addonData->id;
+    AddCoursetoBU($params);
+   }
    $arrResults['Data'] = $response;
   }
  }
@@ -792,7 +801,15 @@ function getCourseUsers()
 
  $course_id     = $_POST['course_id'];
  $enroll_status = $_POST['enroll_status'];
+ $bu_id         = $_POST['buId'];
 
+ if (!empty($bu_id) && ($bu_id != 'null')) {
+  $assigned_userids_arr = getBUAssignedUsers($bu_id);
+  $userids              = implode(',', $assigned_userids_arr);
+  if (!empty($userids)) {
+   $append_query = "AND id in($userids)";
+  }
+ }
  $wsfunction = $_POST['wsfunction'];
  $wstoken    = $_POST['wstoken'];
 
@@ -802,7 +819,7 @@ function getCourseUsers()
 
  $enrolled_userids_arr = getEnrolledUsers($course_id, $moodledata);
 
- $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin')";
+ $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') $append_query";
  $res = $DB->get_records_sql($sql);
  $i   = 1;
  foreach ($res as $rec) {
@@ -1834,6 +1851,18 @@ function AddBUCourse()
  }
  $arrResults['Data']['buc_id'] = $instcid;
  return $arrResults;
+}
+
+function AddCoursetoBU($params)
+{
+ global $DB, $CFG;
+ $coursedid              = new stdClass();
+ $coursedid->bu_id       = $params->bu_id;
+ $coursedid->creator     = $params->userId;
+ $coursedid->timecreated = time();
+ $coursedid->bu_courseid = $params->course_id;
+ $instcid                = $DB->insert_record('cm_bu_course', $coursedid);
+ return $instcid;
 }
 
 function removeBUCourse()
