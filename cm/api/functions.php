@@ -2998,9 +2998,10 @@ function getBadges()
   $arrResults['Data']['empty'] = true;
  }
 
- foreach ($badges_arr as $prec) {
+ foreach ($badges_arr as $prec) {         
   $new_data                    = new stdClass();
   $new_data->name              = $prec->name;
+  $new_data->courseid          = $prec->courseid;
   $context                     = context_course::instance($prec->courseid);
   $new_data->badgeimg          = $CFG->wwwroot . '/pluginfile.php' . '/' . $context->id . '/badges/badgeimage/' . $prec->id . '/f1';
   $response[]                  = $new_data;
@@ -3018,7 +3019,7 @@ function getCerts()
  require_once $CFG->libdir . '/badgeslib.php';
 
  $q = "SELECT cert.id as certid,cert.name as certname,(SELECT c.fullname as coursename FROM {course} c WHERE c.id = course)
- AS fullname,course as cid   FROM {customcert} as cert WHERE id IN (SELECT customcertid from {customcert_issues} WHERE userid=$userid
+ AS fullname,course as cid FROM {customcert} as cert WHERE id IN (SELECT customcertid from {customcert_issues} WHERE userid=$userid
   order by timecreated DESC)";
 
  $objMycert = $DB->get_records_sql($q);
@@ -3030,6 +3031,7 @@ function getCerts()
  foreach ($objMycert as $cert) {
   $new_data                    = new stdClass();
   $new_data->name              = $cert->certname;
+  $new_data->cid               = $cert->cid;
   $new_data->certimg           = $CFG->wwwroot . '/cm/image/courseera.png';
   $response[]                  = $new_data;
   $arrResults['Data']['empty'] = false;
