@@ -612,12 +612,6 @@ function create_course()
   $addonData->durationhrs  = $_POST['durationHrs'];
   $addonData->durationmins = $_POST['durationMins'];
 
-  if ($enrollment_type == 'self') {
-   $enroll_methods = 'Learning self';
-  } else if ($enrollment_type == 'admin') {
-   $enroll_methods = 'Learning manual';
-  }
-
   $num_sections = $_POST['topicCnt'];
   $course_code  = '';
 
@@ -648,6 +642,7 @@ function create_course()
     $addonData->id  = $response->id;
    }
    $res = update_course_cm_changes($addonData);
+   update_enrollment_type($addonData->id, $enrollment_type);
    if (!empty($bu_id) && ($bu_id != 'null')) {
     $params            = new stdClass();
     $params->bu_id     = $_POST['bu_id'];
@@ -710,7 +705,7 @@ function get_course_by_id()
     $response->description   = strip_tags($rec['summary']);
     $response->category      = $rec['categoryid'];
     $response->topics_cnt    = $rec['numsections'];
-    $response->enrol_method  = 'manual';
+    $response->enrol_method  = get_enrollment_type($course_id);
     $custom_fields_data      = get_course_add_on_datas($course_id);
     $response->points        = $custom_fields_data->points;
     $response->course_type   = (int) $custom_fields_data->course_type;
@@ -756,11 +751,7 @@ function update_course()
 
   update_course_cm_changes($addonData);
 
-  if ($enrollment_type == 'self') {
-   $enroll_methods = 'Learning self';
-  } else if ($enrollment_type == 'admin') {
-   $enroll_methods = 'Learning manual';
-  }
+  update_enrollment_type($course_id, $enrollment_type);
 
   $num_sections = $_POST['topicCnt'];
   $course_code  = '';
@@ -1224,7 +1215,7 @@ function listLP()
  global $DB, $CFG;
  $response     = array();
  $append_query = '';
- if (isset($_POST['buId'])) {
+ if (isset($_POST['buId']) && ($_POST['buId'] != 'null')) {
   $buId         = $_POST['buId'];
   $append_query = "AND buid = $buId";
  }
@@ -2117,7 +2108,7 @@ function courseReport()
  global $DB, $CFG;
  $userId = $_POST['userId'];
  $buId   = $_POST['buId'];
- if (!empty($buId)) {
+ if (!empty($buId) && ($buId != 'null')) {
   $courseids_in = getBuCourses($buId);
  }
  $response  = array();
@@ -2998,7 +2989,7 @@ function getBadges()
   $arrResults['Data']['empty'] = true;
  }
 
- foreach ($badges_arr as $prec) {         
+ foreach ($badges_arr as $prec) {
   $new_data                    = new stdClass();
   $new_data->name              = $prec->name;
   $new_data->courseid          = $prec->courseid;
@@ -3117,4 +3108,37 @@ function DeleteLP()
   $arrResults['Data'] = 1;
  }
  return $arrResults;
+}
+
+function update_enrollment_type($courseid, $enrollment_type)
+{
+ global $DB, $CFG;
+ $status = 0;
+
+ $q                  = "SELECT * FROM {enrol} WHERE courseid = $courseid";
+ $enrollment_methods = $DB->get_records_sql($q);
+ $update_q           = "UPDATE {$CFG->prefix}enrol SET status = ? WHERE id =? and enrol= ?";
+ foreach ($enrollment_methods as $enrol) {
+  if ($enrollment_type == 'self') {
+   $status = $DB->execute($update_q, [0, $enrol->id, 'self']);
+  } else if ($enrollment_type == 'manual') {
+   $status = $DB->execute($update_q, [1, $enrol->id, 'self']);
+  }
+ }
+ return $status;
+}
+
+function get_enrollment_type($courseid)
+{
+ global $DB, $CFG;
+ $enrollments_arr    = array();
+ $enrollment_type    =
+ $q                  = "SELECT * FROM {enrol} WHERE courseid = $courseid and status = 0 order by id DESC";
+ $enrollment_methods = $DB->get_records_sql($q);
+
+ foreach ($enrollment_methods as $enrol) {
+  $enrollments_arr[] = $enrol->enrol;
+ }
+ $enrollment_type = in_array('self', $enrollments_arr) ? 'self' : 'manual';
+ return $enrollment_type;
 }
