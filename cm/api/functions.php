@@ -3037,9 +3037,14 @@ function getBUadminDashStats()
 
  $user_id    = $_POST["userid"];
  $wsfunction = $_POST['wsfunction'];
- $buId       = $_POST['buId'];
+ $wstoken    = $_POST["wstoken"];
 
- if (isset($_POST["wstoken"])) {
+ if (isset($_POST['buId']) && ($_POST['buId'] != 'null')) {
+  $buId         = $_POST['buId'];
+  $append_query = "WHERE buid = $buId";
+ }
+
+ if (!empty($wstoken)) {
 
   $q1                       = "SELECT count(Distinct(bu_courseid)) as coursecnt FROM {$CFG->prefix}cm_bu_course where bu_id= $buId ";
   $res                      = $DB->get_record_sql($q1);
@@ -3048,11 +3053,8 @@ function getBUadminDashStats()
   $new_data->bu_courses_cnt = $res->coursecnt;
   $new_data->bu_users_cnt   = $rec->usercnt;
 
-  $q3  = "SELECT count(id) as lpscount FROM {$CFG->prefix}cm_admin_learning_path";
+  $q3  = "SELECT count(id) as lpscount FROM {$CFG->prefix}cm_admin_learning_path $append_query";
   $lps = $DB->get_record_sql($q3);
-
-  $q4  = "SELECT count(id) as buscount FROM {$CFG->prefix}cm_business_units";
-  $bus = $DB->get_record_sql($q4);
 
   $arrResults['Data']['usersCount']   = $new_data->bu_users_cnt;
   $arrResults['Data']['coursesCount'] = $new_data->bu_courses_cnt;
@@ -3061,23 +3063,18 @@ function getBUadminDashStats()
   // start of user enrolled_courses fetching
   $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
-  $params = array('userid' => $vUserId);
+  $params = array('userid' => $user_id);
 
   $curl      = new curl;
   $resp      = $curl->post($server_url, $params);
   $arrOutput = json_decode($resp, true);
 
-  $vEnrolledCount   = 0;
-  $vCompletedCount  = 0;
-  $vInprogressCount = 0;
-  $vNotstartedCount = 0;
+  $enrolledCount = 0;
+
   foreach ($arrOutput as $course) {
-   $vEnrolledCount++;
-   if ($course[progress] == 100) {
-    $vCompletedCount++;
-   }
+   $enrolledCount++;
   }
-  $arrResults['Data']['enCoursesCnt'] = $vEnrolledCount;
+  $arrResults['Data']['enCoursesCnt'] = $enrolledCount;
  }
  return $arrResults;
 }
