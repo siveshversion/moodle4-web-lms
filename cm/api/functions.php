@@ -958,8 +958,6 @@ function mod_get_filtered_courses($arrInput)
 
  foreach ($arrEnrolledCourses as $course) {
 
-  $vCredit = '0.00';
-
   $arrDummyResults[$course["id"]]['id']           = $course["id"];
   $arrDummyResults[$course["id"]]['fullname']     = $course["fullname"];
   $arrDummyResults[$course["id"]]['categoryname'] = $objCategories[$course["category"]]->name;
@@ -972,7 +970,7 @@ function mod_get_filtered_courses($arrInput)
   }
   $arrDummyResults[$course["id"]]['progress']      = $vProgress;
   $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
-  $arrDummyResults[$course["id"]]['credits']       = $vCredit;
+  $arrDummyResults[$course["id"]]['credits']       = get_course_points($course["id"]);
 
   $count++;
  }
@@ -1836,7 +1834,7 @@ function getAssignedBUCourses($cid, $buid)
 }
 
 function AddBUCourse()
-{      
+{
  global $DB, $CFG;
  if (isset($_POST['bu_id'])) {
   $coursedid              = new stdClass();
@@ -2678,16 +2676,6 @@ function getMyEnrolledCourses($arrInput)
  echo '</pre>';*/
 
  foreach ($arrEnrolledCourses as $course) {
-
-  //get cost
-  $sql           = "select cost from {$CFG->prefix}enrol where courseid = $course[id] and enrol = 'credit'";
-  $objCourseCost = $DB->get_record_sql($sql);
-  if ($objCourseCost->cost != '') {
-   $vCredit = $objCourseCost->cost;
-  } else {
-   $vCredit = '0.00';
-  }
-
   $arrDummyResults[$course["id"]]['id']           = $course["id"];
   $arrDummyResults[$course["id"]]['fullname']     = $course["fullname"];
   $arrDummyResults[$course["id"]]['categoryname'] = $objCategories[$course["category"]]->name;
@@ -2700,7 +2688,7 @@ function getMyEnrolledCourses($arrInput)
   }
   $arrDummyResults[$course["id"]]['progress']      = $vProgress;
   $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
-  $arrDummyResults[$course["id"]]['credits']       = $vCredit;
+  $arrDummyResults[$course["id"]]['credits']       = get_course_points($course["id"]);
 
   $count++;
  }
@@ -3144,4 +3132,50 @@ function get_enrollment_type($courseid)
  }
  $enrollment_type = in_array('self', $enrollments_arr) ? 'self' : 'manual';
  return $enrollment_type;
+}
+
+function get_course_points($course_id)
+{
+ global $DB;
+ $q           = "Select points from {course} where id =$course_id";
+ $res         = $DB->get_record_sql($q);
+ $res->points = ($res->points > 0) ? ($res->points) : 0;
+ return $res->points;
+}
+
+function addUserPoints($arrInput)
+{
+ global $DB, $CFG;
+
+ $vUserId     = $arrInput['user_to_post'];
+ $vPoints     = $arrInput['points'];
+ $point_refid = $arrInput['point_refid'];
+ $point_type  = $arrInput['point_type'];
+
+ $condition['userid'] = $vUserId;
+ $objCount            = $DB->get_record('cm_user_points', $condition);
+
+ $objRecord         = new stdClass();
+ $objRecord->points = $vPoints;
+ if ($objCount->userid != '') {
+  $objRecord->id           = $objCount->id;
+  $objRecord->points       = $vPoints;
+  $objRecord->timemodified = time();
+  $objRecord->modifiedby   = $vUserId;
+  $objRecord->point_refid  = $point_refid;
+  $objRecord->point_type   = $point_type;
+  $DB->update_record('cm_user_points', $objRecord);
+ } else {
+  $objRecord->userid       = $vUserId;
+  $objRecord->points       = $vPoints;
+  $objRecord->timemodified = time();
+  $objRecord->modifiedby   = $vUserId;
+  $objRecord->timecreated  = time();
+  $objRecord->createdby    = $vUserId;
+  $objRecord->point_refid  = $point_refid;
+  $objRecord->point_type   = $point_type;
+  $DB->insert_record('cm_user_points', $objRecord);
+ }
+ $arrResults['Data'] = 'Success';
+ return $arrResults;
 }
