@@ -537,8 +537,9 @@ function listCourses()
  $response     = array();
  $append_query = '';
  $bu_id        = $_POST['buId'];
+ $cat_id       = $_POST['catId'];
 
- if (isset($_POST['catId'])) {
+ if (!empty($cat_id)) {
   $catId = $_POST['catId'];
  }
  $wstoken = $_POST['wstoken'];
@@ -1835,7 +1836,7 @@ function getAssignedBUCourses($cid, $buid)
 }
 
 function AddBUCourse()
-{
+{      
  global $DB, $CFG;
  if (isset($_POST['bu_id'])) {
   $coursedid              = new stdClass();
@@ -2854,7 +2855,7 @@ function getPointsReport()
  global $DB, $CFG;
  $response = array();
 
- $q   = "select c.id as userid,c.firstname,c.lastname,c.email from {$CFG->prefix}user c where c.deleted=0 and c.id > 2  GROUP BY c.id ";
+ $q   = "select c.id as userid,c.firstname,c.lastname,c.email from {$CFG->prefix}user c where c.deleted=0 and c.suspended=0 and c.id > 2  GROUP BY c.id ";
  $res = $DB->get_records_sql($q);
 
  $i = 1;
