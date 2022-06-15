@@ -1717,9 +1717,14 @@ function updateBU()
 function listBU()
 {
  global $DB, $CFG;
- $response = array();
+ $response     = array();
+ $append_query = '';
+ $buId         = $_POST['buId'];
+ if (!empty($buId) && ($buId != 'null')) {
+  $append_query = "WHERE id = $buId";
+ }
 
- $q   = "select * from {cm_business_units}";
+ $q   = "select * from {cm_business_units} $append_query";
  $lps = $DB->get_records_sql($q);
  foreach ($lps as $rec) {
   $new_data          = new stdClass();
