@@ -2666,8 +2666,8 @@ function userDetailedReport()
     $new_data->status = 'In Progress';
    } else if ($ext3) {
     $new_data->status = 'Not Started';
-   } else{
-       $new_data->status = '';
+   } else {
+    $new_data->status = '';
    }
 
    $response[] = $new_data;
