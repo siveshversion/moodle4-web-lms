@@ -2620,7 +2620,8 @@ function userDetailedReport()
 
   $row = 0;
 
-  $newData = new stdClass();
+  $newData       = new stdClass();
+  $courseids_arr = array();
 
   if ($type == 'enrolled') {
    $courseids_arr = get_enrolled_cids($uId, $user);
@@ -2630,6 +2631,22 @@ function userDetailedReport()
    $courseids_arr = get_cids_progress($uId, $user, 50);
   } else if ($type == 'notstarted') {
    $courseids_arr = get_cids_progress($uId, $user, 0);
+  } else if ($type == 'all') {
+   $completedcrs  = get_cids_progress($uId, $user, 100);
+   $inprogresscrs = get_cids_progress($uId, $user, 50);
+   $notstartedcrs = get_cids_progress($uId, $user, 0);
+   foreach ($completedcrs as $c) {
+    $comp_arr[]      = $c->id;
+    $courseids_arr[] = $c;
+   }
+   foreach ($inprogresscrs as $c) {
+    $inp_arr[]       = $c->id;
+    $courseids_arr[] = $c;
+   }
+   foreach ($notstartedcrs as $c) {
+    $nots_arr[]      = $c->id;
+    $courseids_arr[] = $c;
+   }
   }
 
   $i = 0;
@@ -2640,7 +2657,17 @@ function userDetailedReport()
    $new_data->course_name = $course->fullname;
    $new_data->enrolled_on = get_activity_timestamp($paramUser->id, $course->id, 'timestart');
    $new_data->last_access = get_activity_timestamp($paramUser->id, $course->id, 'last_access');
-   $response[]            = $new_data;
+   $ext1                  = in_array($course->id, $comp_arr);
+   $ext2                  = in_array($course->id, $inp_arr);
+   if ($ext1) {
+    $new_data->status = 'Completed';
+   } else if ($ext2) {
+    $new_data->status = 'In Progress';
+   } else {
+    $new_data->status = 'Not Started';
+   }
+
+   $response[] = $new_data;
   }
   $arrResults['Data']['User']    = $paramUser;
   $arrResults['Data']['Courses'] = $response;
