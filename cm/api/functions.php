@@ -2659,12 +2659,15 @@ function userDetailedReport()
    $new_data->last_access = get_activity_timestamp($paramUser->id, $course->id, 'last_access');
    $ext1                  = in_array($course->id, $comp_arr);
    $ext2                  = in_array($course->id, $inp_arr);
+   $ext3                  = in_array($course->id, $nots_arr);
    if ($ext1) {
     $new_data->status = 'Completed';
    } else if ($ext2) {
     $new_data->status = 'In Progress';
-   } else {
+   } else if ($ext3) {
     $new_data->status = 'Not Started';
+   } else{
+       $new_data->status = '';
    }
 
    $response[] = $new_data;
