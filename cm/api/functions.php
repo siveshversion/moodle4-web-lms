@@ -606,6 +606,7 @@ function create_course()
   $course_shortname = $_POST['course_short_name'];
   $course_summary   = $_POST['course_description'];
   $enrollment_type  = $_POST['enroll_type'];
+  $enrollBuUsersChk = $_POST['enrollBuUsersChk'];
 
   $addonData               = new stdClass();
   $addonData->coursetype   = $_POST['courseType'];
@@ -649,7 +650,11 @@ function create_course()
     $params->bu_id     = $_POST['bu_id'];
     $params->userId    = $_POST['userId'];
     $params->course_id = $addonData->id;
+    $params->wstoken = $wstoken;
     AddCoursetoBU($params);
+    if ($enrollBuUsersChk) {
+     EnrollBUCoursetoUsers($params);
+    }
    }
    $arrResults['Data'] = $response;
   }
@@ -3208,4 +3213,22 @@ function addUserPoints($arrInput)
  }
  $arrResults['Data'] = 'Success';
  return $arrResults;
+}
+
+function EnrollBUCoursetoUsers($params)
+{
+ global $DB, $CFG;
+ $lastenrolledid = '';
+ $assigned_userids_arr  = getBUAssignedUsers($params->bu_id);
+ $bu_managers_arr       = getBUManagers($params->bu_id);
+ $enrolled_learners_arr = array_diff($assigned_userids_arr, $bu_managers_arr);
+ foreach($enrolled_learners_arr as $learnerid) {
+       $_POST['course_id']=$params->course_id;
+       $_POST['user_id'] = $learnerid;
+       $_POST['role_id'] = 5;
+       $_POST['wsfunction'] = 'enrol_manual_enrol_users';
+       $_POST['wstoken'] = $params->wstoken;
+       $lastenrolledid = enrollUserToCourse($_POST);
+ }
+ return $lastenrolledid;
 }
