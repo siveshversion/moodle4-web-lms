@@ -650,7 +650,7 @@ function create_course()
     $params->bu_id     = $_POST['bu_id'];
     $params->userId    = $_POST['userId'];
     $params->course_id = $addonData->id;
-    $params->wstoken = $wstoken;
+    $params->wstoken   = $wstoken;
     AddCoursetoBU($params);
     if ($enrollBuUsersChk) {
      EnrollBUCoursetoUsers($params);
@@ -3218,17 +3218,218 @@ function addUserPoints($arrInput)
 function EnrollBUCoursetoUsers($params)
 {
  global $DB, $CFG;
- $lastenrolledid = '';
+ $lastenrolledid        = '';
  $assigned_userids_arr  = getBUAssignedUsers($params->bu_id);
  $bu_managers_arr       = getBUManagers($params->bu_id);
  $enrolled_learners_arr = array_diff($assigned_userids_arr, $bu_managers_arr);
- foreach($enrolled_learners_arr as $learnerid) {
-       $_POST['course_id']=$params->course_id;
-       $_POST['user_id'] = $learnerid;
-       $_POST['role_id'] = 5;
-       $_POST['wsfunction'] = 'enrol_manual_enrol_users';
-       $_POST['wstoken'] = $params->wstoken;
-       $lastenrolledid = enrollUserToCourse($_POST);
+ foreach ($enrolled_learners_arr as $learnerid) {
+  $_POST['course_id']  = $params->course_id;
+  $_POST['user_id']    = $learnerid;
+  $_POST['role_id']    = 5;
+  $_POST['wsfunction'] = 'enrol_manual_enrol_users';
+  $_POST['wstoken']    = $params->wstoken;
+  $lastenrolledid      = enrollUserToCourse($_POST);
  }
  return $lastenrolledid;
+}
+
+function addBulkUsers()
+{
+ global $CFG;
+ $response = array();
+ if (isset($_POST["file_input"])) {
+
+  $file_name    = $_POST['file_name'];
+  $encoded_file = $_POST['file_input'];
+  $user_id      = $_POST['user_id'];
+  $wsfunction = $_POST['wsfunction'];
+  $wstoken    = $_POST['wstoken'];
+
+  //$user_id = 44;
+
+  $filepath = csv_file_upload($encoded_file, $file_name, $user_id);
+
+  //$filepath = "./uploads/u_44/csv_bulk_user/sample4.csv";
+
+  $ins_arr = csv_to_array($filepath);
+
+  $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+
+  foreach ($ins_arr as $key => $value) {
+
+   $is_valid = true;
+   $data     = new stdClass();
+
+   if (isset($value['username'])) {
+    $username = $value['username'];
+    $res_arr  = username_validator($username);
+    foreach ($res_arr as $key => $res) {
+     $data->$key = $res;
+    }
+    if (isset($data->error)) {
+     $is_valid   = false;
+     $response[] = $data;
+    }
+   }
+
+   if (isset($value['password'])) {
+    $password = $value['password'];
+    $res_arr  = password_validator($password);
+    foreach ($res_arr as $key => $res) {
+     $data->$key = $res;
+    }
+    if (isset($data->error)) {
+     $is_valid   = false;
+     $response[] = $data;
+    }
+   }
+
+   if (isset($value['email'])) {
+    $email   = $value['email'];
+    $res_arr = usermail_validator($email);
+    foreach ($res_arr as $key => $res) {
+     $data->$key = $res;
+    }
+    if (isset($data->error)) {
+     $is_valid   = false;
+     $response[] = $data;
+    }
+   }
+
+   if ($is_valid == true) {
+    $res_arr = bulk_user_insert($value, $server_url, $user_id);
+    foreach ($res_arr as $key => $res) {
+     $data->$key = $res;
+    }
+    $response[] = $data;
+   }
+  }
+   $arrResults['Data'] = $response;
+ }
+ return $arrResults;
+}
+
+function bulk_user_insert($array, $serverurl, $creatorId)
+{
+ global $DB;
+ $mainusername = trim(strtolower($array['username']), ' ');
+ $password     = trim($array['password'], ' ');
+ $email        = trim(strtolower($array['email']), ' ');
+ $firstname    = trim(strtolower($array['fname']), ' ');
+ $lastname     = trim(strtolower($array['surname']), ' ');
+ $city_town    = trim(strtolower($array['city_town']), ' ');
+ $country      = trim($array['country'], ' ');
+
+ $required_arr = array();
+
+ $compulsary_fields = array('username' => $mainusername, 'password' => $password, 'email' => $email, 'firstname' => $firstname, 'lastname' => $lastname, 'city' => $city_town, 'country' => $country);
+
+ foreach ($compulsary_fields as $key => $values) {
+  if (empty($values)) {
+   $required_arr['error'] = 'Parameter >>' . $key . '<< is missing';
+   return $required_arr;
+  }
+ }
+
+ $params = array('users' => array($compulsary_fields));
+
+ $curl = new curl;
+
+ $resp = $curl->post($serverurl, $params);
+
+ $result     = json_decode($resp, true);
+ $vNewUserId = $result[0][id];
+
+ if ($vNewUserId) {
+  $arr['status'] = 'ok';
+ }
+
+ return $arr;
+}
+
+function csv_file_upload($fileString, $fileName, $user_id)
+{
+ if (!empty($fileString)) {
+  $time = null;
+  // $time = time();
+  list($type, $data) = explode(';', $fileString);
+  list(, $data)      = explode(',', $data);
+  if (!file_exists("uploads/u_$user_id")) {
+   mkdir("uploads/u_$user_id", 0777, true);
+  }
+  if (!file_exists("uploads/u_$user_id/csv_bulk_user")) {
+   mkdir("uploads/u_$user_id/csv_bulk_user", 0777, true);
+  }
+  $data = base64_decode($data);
+  file_put_contents("uploads/u_$user_id/csv_bulk_user/" . $fileName, $data);
+ }
+ $filepath = "uploads/u_$user_id/csv_bulk_user/" . $fileName;
+ return $filepath;
+}
+
+function csv_to_array($filename = '', $delimiter = ',')
+{
+ if (!file_exists($filename) || !is_readable($filename)) {
+  return false;
+ }
+
+ $header = null;
+ $data   = array();
+ if (($handle = fopen($filename, 'r')) !== false) {
+  while (($row = fgetcsv($handle, 1000, $delimiter)) !== false) {
+   if (!$header) {
+    $header = $row;
+   } else {
+    $data[] = array_combine($header, $row);
+   }
+
+  }
+  fclose($handle);
+ }
+ return $data;
+}
+
+function password_validator($password)
+{
+    $error_arr = array();
+// Validate password strength
+    $uppercase = preg_match('@[A-Z]@', $password);
+    $lowercase = preg_match('@[a-z]@', $password);
+    $number = preg_match('@[0-9]@', $password);
+    $specialChars = preg_match('@[^\w]@', $password);
+
+    if (!$uppercase || !$lowercase || !$number || !$specialChars || strlen($password) < 8) {
+        $error_arr['error'] = 'Password should be at least 8 characters in length and should include at least one upper case letter, one number, and one special character.';
+    }
+    return $error_arr;
+}
+
+function username_validator($username)
+{
+    global $DB;
+    $error_arr = array();
+    $sql = "SELECT username FROM {user} where  username = '$username'";
+    $res = $DB->get_records_sql($sql);
+    if (!empty($res)) {
+        foreach ($res as $rec) {
+            $error_arr['error'] = 'Username >>' . $rec->username . '<< already taken';
+            return $error_arr;
+        }
+    }
+    return $error_arr;
+}
+
+function usermail_validator($email)
+{
+    global $DB;
+    $error_arr = array();
+    $sql = "SELECT email FROM {user} where email = '$email'";
+    $res = $DB->get_records_sql($sql);
+    if (!empty($res)) {
+        foreach ($res as $rec) {
+            $error_arr['error'] = 'Email Id >> ' . $rec->email . ' << already taken';
+            return $error_arr;
+        }
+    }
+    return $error_arr;
 }
