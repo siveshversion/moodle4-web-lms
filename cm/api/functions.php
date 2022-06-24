@@ -3242,8 +3242,8 @@ function addBulkUsers()
   $file_name    = $_POST['file_name'];
   $encoded_file = $_POST['file_input'];
   $user_id      = $_POST['user_id'];
-  $wsfunction = $_POST['wsfunction'];
-  $wstoken    = $_POST['wstoken'];
+  $wsfunction   = $_POST['wsfunction'];
+  $wstoken      = $_POST['wstoken'];
 
   //$user_id = 44;
 
@@ -3304,7 +3304,7 @@ function addBulkUsers()
     $response[] = $data;
    }
   }
-   $arrResults['Data'] = $response;
+  $arrResults['Data'] = $response;
  }
  return $arrResults;
 }
@@ -3391,45 +3391,96 @@ function csv_to_array($filename = '', $delimiter = ',')
 
 function password_validator($password)
 {
-    $error_arr = array();
+ $error_arr = array();
 // Validate password strength
-    $uppercase = preg_match('@[A-Z]@', $password);
-    $lowercase = preg_match('@[a-z]@', $password);
-    $number = preg_match('@[0-9]@', $password);
-    $specialChars = preg_match('@[^\w]@', $password);
+ $uppercase    = preg_match('@[A-Z]@', $password);
+ $lowercase    = preg_match('@[a-z]@', $password);
+ $number       = preg_match('@[0-9]@', $password);
+ $specialChars = preg_match('@[^\w]@', $password);
 
-    if (!$uppercase || !$lowercase || !$number || !$specialChars || strlen($password) < 8) {
-        $error_arr['error'] = 'Password should be at least 8 characters in length and should include at least one upper case letter, one number, and one special character.';
-    }
-    return $error_arr;
+ if (!$uppercase || !$lowercase || !$number || !$specialChars || strlen($password) < 8) {
+  $error_arr['error'] = 'Password should be at least 8 characters in length and should include at least one upper case letter, one number, and one special character.';
+ }
+ return $error_arr;
 }
 
 function username_validator($username)
 {
-    global $DB;
-    $error_arr = array();
-    $sql = "SELECT username FROM {user} where  username = '$username'";
-    $res = $DB->get_records_sql($sql);
-    if (!empty($res)) {
-        foreach ($res as $rec) {
-            $error_arr['error'] = 'Username >>' . $rec->username . '<< already taken';
-            return $error_arr;
-        }
-    }
-    return $error_arr;
+ global $DB;
+ $error_arr = array();
+ $sql       = "SELECT username FROM {user} where  username = '$username'";
+ $res       = $DB->get_records_sql($sql);
+ if (!empty($res)) {
+  foreach ($res as $rec) {
+   $error_arr['error'] = 'Username >>' . $rec->username . '<< already taken';
+   return $error_arr;
+  }
+ }
+ return $error_arr;
 }
 
 function usermail_validator($email)
 {
-    global $DB;
-    $error_arr = array();
-    $sql = "SELECT email FROM {user} where email = '$email'";
-    $res = $DB->get_records_sql($sql);
-    if (!empty($res)) {
-        foreach ($res as $rec) {
-            $error_arr['error'] = 'Email Id >> ' . $rec->email . ' << already taken';
-            return $error_arr;
+ global $DB;
+ $error_arr = array();
+ $sql       = "SELECT email FROM {user} where email = '$email'";
+ $res       = $DB->get_records_sql($sql);
+ if (!empty($res)) {
+  foreach ($res as $rec) {
+   $error_arr['error'] = 'Email Id >> ' . $rec->email . ' << already taken';
+   return $error_arr;
+  }
+ }
+ return $error_arr;
+}
+
+function getAvailCourses()
+{
+ global $DB, $CFG;
+
+ require_once $CFG->libdir . '/enrollib.php';
+
+ $user_id = $_POST['user_id'];
+
+ $courses = enrol_get_users_courses($user_id, false, null, null);
+
+ foreach ($courses as $course) {
+  $enrolled_arr[] = $course->id;
+ }
+ $enrolled_cids = implode(',', $enrolled_arr);
+
+ $q1                = "SELECT id,fullname,summary FROM {$CFG->prefix}course where id > 1 and id NOT IN($enrolled_cids) and visible=1";
+ $remaining_courses = $DB->get_records_sql($q1);
+
+ foreach ($remaining_courses as $rec) {
+  $result                    = new stdClass();
+  $result->id                = $rec->id;
+  $result->fullname          = $rec->fullname;
+  $result->desc              = $rec->summary;  
+  $canSelfEnroll = canSelfEnroll($rec->id);
+  if ($canSelfEnroll) {
+   $response[] = $result;
+  }
+
+ }
+ $arrResults['Data'] = $response;
+ return $arrResults;
+}
+
+function canSelfEnroll($courseid)
+{
+    global $CFG;
+    $flag = FALSE;
+    require_once $CFG->libdir . '/enrollib.php';
+
+    $instances = enrol_get_instances($courseid, false);
+
+    foreach ($instances as $instance) {
+        if ($instance->enrol === 'self') {
+           if($instance->status === '0'){
+            $flag = TRUE;
+           }
         }
     }
-    return $error_arr;
+    return $flag;
 }
