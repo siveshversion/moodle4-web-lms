@@ -3453,11 +3453,11 @@ function getAvailCourses()
  $remaining_courses = $DB->get_records_sql($q1);
 
  foreach ($remaining_courses as $rec) {
-  $result                    = new stdClass();
-  $result->id                = $rec->id;
-  $result->fullname          = $rec->fullname;
-  $result->desc              = $rec->summary;  
-  $canSelfEnroll = canSelfEnroll($rec->id);
+  $result           = new stdClass();
+  $result->id       = $rec->id;
+  $result->fullname = $rec->fullname;
+  $result->desc     = $rec->summary;
+  $canSelfEnroll    = canSelfEnroll($rec->id);
   if ($canSelfEnroll) {
    $response[] = $result;
   }
@@ -3469,18 +3469,41 @@ function getAvailCourses()
 
 function canSelfEnroll($courseid)
 {
-    global $CFG;
-    $flag = FALSE;
-    require_once $CFG->libdir . '/enrollib.php';
+ global $CFG;
+ $flag = false;
+ require_once $CFG->libdir . '/enrollib.php';
 
-    $instances = enrol_get_instances($courseid, false);
+ $instances = enrol_get_instances($courseid, false);
 
-    foreach ($instances as $instance) {
-        if ($instance->enrol === 'self') {
-           if($instance->status === '0'){
-            $flag = TRUE;
-           }
-        }
-    }
-    return $flag;
+ foreach ($instances as $instance) {
+  if ($instance->enrol === 'self') {
+   if ($instance->status === '0') {
+    $flag = true;
+   }
+  }
+ }
+ return $flag;
+}
+
+function getCatalog()
+{
+ global $DB, $CFG;
+ $categories = $DB->get_records('course_categories');
+ foreach ($categories as $category) {
+  $courses = $DB->get_records('course', array('category' => $category->id, 'visible' => 1));
+  foreach ($courses as $course) {
+   $raw_course              = new stdClass();
+   $raw_course->course_id   = $course->id;
+   $raw_course->course_name = $course->fullname;
+   $raw_course_arr[]        = $raw_course;
+  }
+  $raw_category                = new stdClass();
+  $raw_category->category_id   = $category->id;
+  $raw_category->category_name = $category->name;
+  $raw_category->course_cnt    = sizeof($raw_course_arr);
+  $raw_category->courses       = $raw_course_arr;
+  $response[]                  = $raw_category;
+ }
+ $arrResults['Data'] = $response;
+ return $arrResults;
 }
