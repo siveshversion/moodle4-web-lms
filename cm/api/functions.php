@@ -3492,6 +3492,7 @@ function getCatalog()
  $categories = $DB->get_records('course_categories');
  foreach ($categories as $category) {
   $courses = $DB->get_records('course', array('category' => $category->id, 'visible' => 1));
+  $raw_course_arr = array();
   foreach ($courses as $course) {
    $raw_course              = new stdClass();
    $raw_course->course_id   = $course->id;
