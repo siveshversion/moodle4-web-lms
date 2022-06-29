@@ -607,6 +607,7 @@ function create_course()
   $course_summary   = $_POST['course_description'];
   $enrollment_type  = $_POST['enroll_type'];
   $enrollBuUsersChk = $_POST['enrollBuUsersChk'];
+  $enrollBuUsersChk = ($enrollBuUsersChk === 'false') ? false : true;
 
   $addonData               = new stdClass();
   $addonData->coursetype   = $_POST['courseType'];
