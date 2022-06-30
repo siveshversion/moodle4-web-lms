@@ -3254,6 +3254,11 @@ function addBulkUsers()
 
   $ins_arr = csv_to_array($filepath);
 
+  if (empty($ins_arr)) {
+   $error_arr['error'] = 'Field Rows cannot be empty';
+   $response[]         = $error_arr;
+  }
+
   $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
   foreach ($ins_arr as $key => $value) {
@@ -3267,34 +3272,25 @@ function addBulkUsers()
     foreach ($res_arr as $key => $res) {
      $data->$key = $res;
     }
-    if (isset($data->error)) {
-     $is_valid   = false;
-     $response[] = $data;
-    }
    }
-
    if (isset($value['password'])) {
     $password = $value['password'];
     $res_arr  = password_validator($password);
     foreach ($res_arr as $key => $res) {
      $data->$key = $res;
     }
-    if (isset($data->error)) {
-     $is_valid   = false;
-     $response[] = $data;
-    }
    }
-
    if (isset($value['email'])) {
     $email   = $value['email'];
     $res_arr = usermail_validator($email);
     foreach ($res_arr as $key => $res) {
      $data->$key = $res;
     }
-    if (isset($data->error)) {
-     $is_valid   = false;
-     $response[] = $data;
-    }
+   }
+
+   if (isset($data->error)) {
+    $is_valid   = false;
+    $response[] = $data;
    }
 
    if ($is_valid == true) {
@@ -3319,19 +3315,21 @@ function bulk_user_insert($array, $serverurl, $creatorId)
  $firstname    = trim(strtolower($array['fname']), ' ');
  $lastname     = trim(strtolower($array['surname']), ' ');
  $city_town    = trim(strtolower($array['city_town']), ' ');
+ $buId         = trim(strtolower($array['bu_id']), ' ');
  $country      = trim($array['country'], ' ');
 
  $required_arr = array();
 
- $compulsary_fields = array('username' => $mainusername, 'password' => $password, 'email' => $email, 'firstname' => $firstname, 'lastname' => $lastname, 'city' => $city_town, 'country' => $country);
+ $compulsary_fields = array('username' => $mainusername, 'password' => $password, 'email' => $email, 'firstname' => $firstname, 'lastname' => $lastname, 'BuId' => $buId, 'city' => $city_town, 'country' => $country);
 
  foreach ($compulsary_fields as $key => $values) {
   if (empty($values)) {
-   $required_arr['error'] = 'Parameter >>' . $key . '<< is missing';
+   $required_arr['error'] = 'Parameter : ' . $key . ' -  is missing';
    return $required_arr;
   }
  }
-
+ // to remove the BU ID from compulsary fields as it is not in user table
+ array_splice($compulsary_fields,5,1);
  $params = array('users' => array($compulsary_fields));
 
  $curl = new curl;
@@ -3342,6 +3340,9 @@ function bulk_user_insert($array, $serverurl, $creatorId)
  $vNewUserId = $result[0][id];
 
  if ($vNewUserId) {
+  if ($DB->get_record('cm_business_units', array('id' => $buId))) {
+   BUuserEntry($buId, $vNewUserId);
+  }
   $arr['status'] = 'ok';
  }
 
@@ -3413,7 +3414,7 @@ function username_validator($username)
  $res       = $DB->get_records_sql($sql);
  if (!empty($res)) {
   foreach ($res as $rec) {
-   $error_arr['error'] = 'Username >>' . $rec->username . '<< already taken';
+   $error_arr['error'] = 'Username: ' . $rec->username . ' -  already taken';
    return $error_arr;
   }
  }
@@ -3428,7 +3429,7 @@ function usermail_validator($email)
  $res       = $DB->get_records_sql($sql);
  if (!empty($res)) {
   foreach ($res as $rec) {
-   $error_arr['error'] = 'Email Id >> ' . $rec->email . ' << already taken';
+   $error_arr['error'] = 'Email Id: ' . $rec->email . '  -  already taken';
    return $error_arr;
   }
  }
@@ -3491,7 +3492,7 @@ function getCatalog()
  global $DB, $CFG;
  $categories = $DB->get_records('course_categories');
  foreach ($categories as $category) {
-  $courses = $DB->get_records('course', array('category' => $category->id, 'visible' => 1));
+  $courses        = $DB->get_records('course', array('category' => $category->id, 'visible' => 1));
   $raw_course_arr = array();
   foreach ($courses as $course) {
    $raw_course              = new stdClass();
