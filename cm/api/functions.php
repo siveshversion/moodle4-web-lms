@@ -1220,17 +1220,20 @@ function listLP()
  global $DB, $CFG;
  $response     = array();
  $append_query = '';
+ $bu           = null;
  if (isset($_POST['buId']) && ($_POST['buId'] != 'null')) {
   $buId         = $_POST['buId'];
   $append_query = "AND buid = $buId";
+  $bu           = $DB->get_record('cm_business_units', array('id' => $buId));
  }
+ $BuName = (empty($bu)) ? 'Learnospace' : $bu->bu_name;
  if (isset($_POST['userId'])) {
   $q   = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active' $append_query";
   $lps = $DB->get_records_sql($q);
   foreach ($lps as $rec) {
    $new_data                 = new stdClass();
    $new_data->lp_name        = $rec->lpname;
-   $new_data->lp_bu          = 'Learnospace';
+   $new_data->lp_bu          = $BuName;
    $new_data->lp_id          = $rec->id;
    $new_data->lp_courses_cnt = getLPCourseCnt($rec->id);
    $new_data->lp_users_cnt   = LpUserscnt($rec->id);
@@ -3329,7 +3332,7 @@ function bulk_user_insert($array, $serverurl, $creatorId)
   }
  }
  // to remove the BU ID from compulsary fields as it is not in user table
- array_splice($compulsary_fields,5,1);
+ array_splice($compulsary_fields, 5, 1);
  $params = array('users' => array($compulsary_fields));
 
  $curl = new curl;
