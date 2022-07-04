@@ -3454,7 +3454,9 @@ function getAvailCourses()
  }
  $enrolled_cids = implode(',', $enrolled_arr);
 
- $q1                = "SELECT id,fullname,summary FROM {$CFG->prefix}course where id > 1 and id NOT IN($enrolled_cids) and visible=1";
+ $append_notin_query = empty($enrolled_cids)? '' : "AND id NOT IN($enrolled_cids)";
+
+ $q1                = "SELECT id,fullname,summary FROM {$CFG->prefix}course where id > 1 and visible=1 $append_notin_query";
  $remaining_courses = $DB->get_records_sql($q1);
 
  foreach ($remaining_courses as $rec) {
