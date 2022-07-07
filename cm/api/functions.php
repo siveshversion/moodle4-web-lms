@@ -2204,9 +2204,17 @@ function get_progress_by_cid($cid, $user, $progress_rate)
   $totals = $DB->get_records_sql("select * from {course_modules} where course = $cid and deletioninprogress = 0 and module != 9 ");
   $total  = count($totals);
 
-  $attempt = $DB->get_records_sql("select a.id  from {course_modules_completion} as a
+  if (!empty($_POST['edate'])) {
+   $stimestamp   = makeTimestamp($_POST['sdate']);
+   $etimestamp   = makeTimestamp($_POST['edate']);
+   $append_query = "and a.timemodified between $stimestamp and $etimestamp";
+  } else {
+   $append_query = '';
+  }
+
+  $attempt = $DB->get_records_sql("select a.id,a.timemodified from {course_modules_completion} as a
          join {course_modules} as b on a.coursemoduleid = b.id
-         where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1");
+         where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1 $append_query");
 
   $attempted = count($attempt);
 
@@ -3454,7 +3462,7 @@ function getAvailCourses()
  }
  $enrolled_cids = implode(',', $enrolled_arr);
 
- $append_notin_query = empty($enrolled_cids)? '' : "AND id NOT IN($enrolled_cids)";
+ $append_notin_query = empty($enrolled_cids) ? '' : "AND id NOT IN($enrolled_cids)";
 
  $q1                = "SELECT id,fullname,summary FROM {$CFG->prefix}course where id > 1 and visible=1 $append_notin_query";
  $remaining_courses = $DB->get_records_sql($q1);
@@ -3514,4 +3522,17 @@ function getCatalog()
  }
  $arrResults['Data'] = $response;
  return $arrResults;
+}
+
+function makeDate($timestamp)
+{
+ $readable_date = date("d-M-Y", $timestamp);
+ return $readable_date;
+}
+
+function makeTimestamp($dateString)
+{
+ $mdate     = str_replace('/', '-', $dateString);
+ $timestamp = strtotime($mdate);
+ return $timestamp;
 }
