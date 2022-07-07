@@ -2212,9 +2212,11 @@ function get_progress_by_cid($cid, $user, $progress_rate)
    $append_query = '';
   }
 
-  $attempt = $DB->get_records_sql("select a.id,a.timemodified from {course_modules_completion} as a
-         join {course_modules} as b on a.coursemoduleid = b.id
-         where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1 $append_query");
+  $attempt_q = "select a.id,a.timemodified from {course_modules_completion} as a
+  join {course_modules} as b on a.coursemoduleid = b.id
+  where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1 $append_query";
+  
+  $attempt = $DB->get_records_sql($attempt_q);
 
   $attempted = count($attempt);
 
@@ -2275,18 +2277,19 @@ function get_progress_by_uid($uid, $user, $progress_rate)
   $totals = $DB->get_records_sql("select * from {course_modules} where course = $course->id and deletioninprogress = 0 and module != 9 ");
   $total  = count($totals);
 
-
   if (!empty($_POST['edate'])) {
-       $stimestamp   = makeTimestamp($_POST['sdate']);
-       $etimestamp   = makeTimestamp($_POST['edate']);
-       $append_query = "and a.timemodified between $stimestamp and $etimestamp";
-      } else {
-       $append_query = '';
-      }
-    
-      $attempt = $DB->get_records_sql("select a.id,a.timemodified from {course_modules_completion} as a
+   $stimestamp   = makeTimestamp($_POST['sdate']);
+   $etimestamp   = makeTimestamp($_POST['edate']);
+   $append_query = "and a.timemodified between $stimestamp and $etimestamp";
+  } else {
+   $append_query = '';
+  }
+
+  $attempt_q = "select a.id,a.timemodified from {course_modules_completion} as a
              join {course_modules} as b on a.coursemoduleid = b.id
-             where a.userid = $user->id and b.course = $cid and b.module != 9 and completionstate >= 1 $append_query");
+             where a.userid = $uid and b.course = $course->id and b.module != 9 and completionstate >= 1 $append_query";
+
+  $attempt = $DB->get_records_sql($attempt_q);
 
   $attempted = count($attempt);
 
