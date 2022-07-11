@@ -3083,9 +3083,13 @@ function getCerts()
  }
 
  foreach ($objMycert as $cert) {
+
+  $q2                          = "SELECT cm.id as cmodid  FROM {course_modules} as cm join {customcert} as cc on cm.instance=cc.id WHERE cm.module = 25 and cc.course =  $cert->cid";
+  $course_module               = $DB->get_record_sql($q2);
   $new_data                    = new stdClass();
   $new_data->name              = $cert->certname;
   $new_data->cid               = $cert->cid;
+  $new_data->cmodid            = $course_module->cmodid;
   $new_data->certimg           = $CFG->wwwroot . '/cm/image/courseera.png';
   $response[]                  = $new_data;
   $arrResults['Data']['empty'] = false;
