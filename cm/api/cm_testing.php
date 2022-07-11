@@ -23,7 +23,8 @@ $progress_rate  = 100;
 $_POST['sdate'] = '11/07/2022';
 $_POST['edate'] = '11/07/2022';
 $stimestamp     = makeTimestamp($_POST['sdate']);
-$etimestamp     = makeTimestamp($_POST['edate']);
+$etimestamp     = makeEndTimestamp($_POST['edate']);
+$stimestamp = $stimestamp + 24*3600;
 $sdate = makeDate($stimestamp);
 $edate = makeDate($etimestamp);
 

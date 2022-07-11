@@ -2206,7 +2206,7 @@ function get_progress_by_cid($cid, $user, $progress_rate)
 
   if (!empty($_POST['edate']) && ($progress_rate === 100)) {
    $stimestamp   = makeTimestamp($_POST['sdate']);
-   $etimestamp   = makeTimestamp($_POST['edate']);
+   $etimestamp   = makeEndTimestamp($_POST['edate']);
    $append_query = "and a.timemodified between $stimestamp and $etimestamp";
   } else {
    $append_query = '';
@@ -2279,7 +2279,7 @@ function get_progress_by_uid($uid, $user, $progress_rate)
 
   if (!empty($_POST['edate']) && ($progress_rate === 100)) {
    $stimestamp   = makeTimestamp($_POST['sdate']);
-   $etimestamp   = makeTimestamp($_POST['edate']);
+   $etimestamp   = makeEndTimestamp($_POST['edate']);
    $append_query = "and a.timemodified between $stimestamp and $etimestamp";
   } else {
    $append_query = '';
@@ -2451,7 +2451,7 @@ function get_uids_progress($cid, $u, $progress_rate)
 
   if (($_POST['edate'] != 'null') && (!empty($_POST['edate'])) && ($progress_rate === 100)) {
    $stimestamp   = makeTimestamp($_POST['sdate']);
-   $etimestamp   = makeTimestamp($_POST['edate']);
+   $etimestamp   = makeEndTimestamp($_POST['edate']);
    $append_query = "and a.timemodified between $stimestamp and $etimestamp";
   } else {
    $append_query = '';
@@ -3562,3 +3562,13 @@ function makeTimestamp($dateString)
  $timestamp = strtotime($mdate);
  return $timestamp;
 }
+
+function makeEndTimestamp($dateString)
+{
+ $mdate     = str_replace('/', '-', $dateString);
+ $timestamp = strtotime($mdate);
+ // added 23 hours extra as the date time will be xx-xx-xxx 00:00:00
+ $timestamp = $timestamp + 23*3600;
+ return $timestamp;
+}
+
