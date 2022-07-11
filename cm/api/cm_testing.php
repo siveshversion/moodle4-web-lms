@@ -14,14 +14,14 @@ global $DB, $CFG;
 
 echo '<pre>';
 
-$userId         = 9;
+$userId         = 40;
 $user           = $DB->get_record('user', array("id" => $userId));
 $BU             = getBuByUid($user->id);
 $user->cm_bu_id = $BU->id;
-$cid            = 7;
+$cid            = 53;
 $progress_rate  = 100;
-$_POST['sdate'] = '04/05/2022';
-$_POST['edate'] = '15/05/2022';
+$_POST['sdate'] = '11/07/2022';
+$_POST['edate'] = '11/07/2022';
 $stimestamp     = makeTimestamp($_POST['sdate']);
 $etimestamp     = makeTimestamp($_POST['edate']);
 $sdate = makeDate($stimestamp);
