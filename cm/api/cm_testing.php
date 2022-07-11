@@ -14,6 +14,20 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+//login token generation test cases
+
+$arrInput['username'] = 'admin';
+$arrInput['password'] = 'Learn@123';
+
+$token = generate_get_user_token($arrInput);
+
+echo 'logged in user token: ';
+print_r($token['Data']['token']);
+
+exit;
+
+//complettion date range filter test cases
+
 $userId         = 40;
 $user           = $DB->get_record('user', array("id" => $userId));
 $BU             = getBuByUid($user->id);
@@ -24,9 +38,9 @@ $_POST['sdate'] = '11/07/2022';
 $_POST['edate'] = '11/07/2022';
 $stimestamp     = makeTimestamp($_POST['sdate']);
 $etimestamp     = makeEndTimestamp($_POST['edate']);
-$stimestamp = $stimestamp + 24*3600;
-$sdate = makeDate($stimestamp);
-$edate = makeDate($etimestamp);
+$stimestamp     = $stimestamp + 24 * 3600;
+$sdate          = makeDate($stimestamp);
+$edate          = makeDate($etimestamp);
 
 echo $stimestamp;
 echo '<br>';
