@@ -915,6 +915,10 @@ function unenrollUserToCourse()
   $course_id = $_POST['course_id'];
   $user_id   = $_POST['user_id'];
 
+  // fix for self enrolled courses by student mot unenrolled
+  $canSelfEnroll  = canSelfEnroll($course_id);
+  $response->self = ($canSelfEnroll === true) ? 1 : 0;
+
   $server_url = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
   $params = array(
@@ -928,10 +932,15 @@ function unenrollUserToCourse()
 
   $curl          = new curl();
   $curl_response = $curl->post($server_url, $params);
-  if (!empty($curl_response)) {
+
+  $moodledata             = new stdClass();
+  $moodledata->wsfunction = 'core_enrol_get_enrolled_users';
+  $moodledata->wstoken    = $wstoken;
+  $enrolled_userids_arr   = getEnrolledUsers($course_id, $moodledata);
    $response->status   = 1;
+   $response->curl_res = $curl_response;
+   $response->enrolled = in_array($user_id, $enrolled_userids_arr) ? true : false;
    $arrResults['Data'] = $response;
-  }
  }
  return $arrResults;
 }
@@ -3568,7 +3577,6 @@ function makeEndTimestamp($dateString)
  $mdate     = str_replace('/', '-', $dateString);
  $timestamp = strtotime($mdate);
  // added 23 hours extra as the date time will be xx-xx-xxx 00:00:00
- $timestamp = $timestamp + 23*3600;
+ $timestamp = $timestamp + 23 * 3600;
  return $timestamp;
 }
-
