@@ -14,6 +14,23 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$res = canCourseEdit(63, 47);
+
+echo $res;
+
+exit;
+
+$user           = $DB->get_record('user', array("id" => 40));
+$BU             = getBuByUid($user->id);
+$user->cm_bu_id = $BU->id;
+
+$newData->inprogress_cnt = get_progress_by_cid(60, $user, 50);
+$newData->notstarted_cnt = get_progress_by_cid(60, $user, 0);
+
+print_r($newData);
+
+exit;
+
 //login token generation test cases
 
 $arrInput['username'] = 'admin';

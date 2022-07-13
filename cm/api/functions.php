@@ -538,6 +538,11 @@ function listCourses()
  $append_query = '';
  $bu_id        = $_POST['buId'];
  $cat_id       = $_POST['catId'];
+ $userId       = $_POST['userId'];
+
+ $siteAdmin = checkisSiteAdmin($userId);
+ $BuAdmin   = checkisBUAdmin($userId);
+ $canEdit   = ($siteAdmin) ? true : false;
 
  if (!empty($cat_id)) {
   $catId = $_POST['catId'];
@@ -553,14 +558,17 @@ function listCourses()
  if (isset($_POST['userId'])) {
   if (!empty($bu_id) && ($bu_id != 'null')) {
    $assigned_courses = getBuCourses($bu_id);
-   $q                = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses)";
+   $q                = "SELECT * FROM {course} where visible=1 and $categoryFilter and id in($assigned_courses) order by id DESC";
   } else {
-   $q = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+   $q = "SELECT * FROM {course} where visible=1 and $categoryFilter order by id DESC";
   }
 
   $courses = $DB->get_records_sql($q);
   $i       = 1;
   foreach ($courses as $rec) {
+   if ($BuAdmin) {
+    $canEdit = canCourseEdit($rec->id,$userId);
+   }
    $new_data                   = new stdClass();
    $cat                        = new stdClass();
    $cat->tablename             = 'course_categories';
@@ -574,6 +582,7 @@ function listCourses()
    $new_data->category_id      = $category->id;
    $new_data->category_name    = $category->name;
    $new_data->course_id        = $rec->id;
+   $new_data->can_edit         = $canEdit;
    $participants               = getEnrolledUsers($rec->id, $moodledata);
    $new_data->enrolled_cnt     = count($participants);
    $response[]                 = $new_data;
@@ -600,6 +609,7 @@ function create_course()
   $wsfunction = $_POST['wsfunction'];
   $wstoken    = $_POST['wstoken'];
   $bu_id      = $_POST['bu_id'];
+  $creator_id      = $_POST['creator_id'];
 
   $course_category  = $_POST['course_category'];
   $course_name      = $_POST['course_full_name'];
@@ -614,6 +624,7 @@ function create_course()
   $addonData->points       = $_POST['points'];
   $addonData->durationhrs  = $_POST['durationHrs'];
   $addonData->durationmins = $_POST['durationMins'];
+  $addonData->creator_id   = $_POST['creator_id'];
 
   $num_sections = $_POST['topicCnt'];
   $course_code  = '';
@@ -673,6 +684,7 @@ function update_course_cm_changes($params)
   $Course              = new stdClass();
   $Course->id          = $params->id;
   $Course->course_type = $params->coursetype;
+  $Course->created_by  = $params->creator_id;
   $Course->points      = (int) $params->points;
   $Course->hours       = $params->durationhrs;
   $Course->mints       = $params->durationmins;
@@ -749,12 +761,14 @@ function update_course()
   $enrollment_type  = $_POST['enroll_type'];
   $old_enroll_id    = $_POST['old_enroll_id'];
 
+
   $addonData               = new stdClass();
   $addonData->id           = $course_id;
   $addonData->coursetype   = $_POST['courseType'];
   $addonData->points       = $_POST['points'];
   $addonData->durationhrs  = $_POST['durationHrs'];
   $addonData->durationmins = $_POST['durationMins'];
+  $addonData->creator_id   = $_POST['creator_id'];
 
   update_course_cm_changes($addonData);
 
@@ -937,10 +951,10 @@ function unenrollUserToCourse()
   $moodledata->wsfunction = 'core_enrol_get_enrolled_users';
   $moodledata->wstoken    = $wstoken;
   $enrolled_userids_arr   = getEnrolledUsers($course_id, $moodledata);
-   $response->status   = 1;
-   $response->curl_res = $curl_response;
-   $response->enrolled = in_array($user_id, $enrolled_userids_arr) ? true : false;
-   $arrResults['Data'] = $response;
+  $response->status       = 1;
+  $response->curl_res     = $curl_response;
+  $response->enrolled     = in_array($user_id, $enrolled_userids_arr) ? true : false;
+  $arrResults['Data']     = $response;
  }
  return $arrResults;
 }
@@ -1741,7 +1755,7 @@ function listBU()
   $append_query = "WHERE id = $buId";
  }
 
- $q   = "select * from {cm_business_units} $append_query";
+ $q   = "select * from {cm_business_units} $append_query order by id desc";
  $lps = $DB->get_records_sql($q);
  foreach ($lps as $rec) {
   $new_data          = new stdClass();
@@ -1803,7 +1817,7 @@ function listBUCourses()
  $i    = 1;
  $buid = $_POST['bu_id'];
  if (isset($buid)) {
-  $q       = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+  $q       = "SELECT * FROM {course} where visible=1 and $categoryFilter order by id DESC";
   $courses = $DB->get_records_sql($q);
   foreach ($courses as $rec) {
    $new_data                   = new stdClass();
@@ -1876,6 +1890,15 @@ function AddCoursetoBU($params)
  $coursedid->bu_courseid = $params->course_id;
  $instcid                = $DB->insert_record('cm_bu_course', $coursedid);
  return $instcid;
+}
+
+function canCourseEdit($cid, $creator_id)
+{
+ global $DB, $CFG;
+ $q1      = "SELECT id FROM {$CFG->prefix}course where id= $cid and created_by = $creator_id";
+ $res     = $DB->get_record_sql($q1);
+ $canedit = !empty($res->id) ? true : false;
+ return $canedit;
 }
 
 function removeBUCourse()
