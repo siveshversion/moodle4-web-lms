@@ -554,6 +554,9 @@ function listCourses()
  $moodledata             = new stdClass();
  $moodledata->wsfunction = $_POST['wsfunction'];
  $moodledata->wstoken    = $wstoken;
+ if ($BuAdmin) {
+  $moodledata->buId = $bu_id;
+ }
 
  if (isset($_POST['userId'])) {
   if (!empty($bu_id) && ($bu_id != 'null')) {
@@ -567,7 +570,7 @@ function listCourses()
   $i       = 1;
   foreach ($courses as $rec) {
    if ($BuAdmin) {
-    $canEdit = canCourseEdit($rec->id,$userId);
+    $canEdit = canCourseEdit($rec->id, $userId);
    }
    $new_data                   = new stdClass();
    $cat                        = new stdClass();
@@ -609,7 +612,7 @@ function create_course()
   $wsfunction = $_POST['wsfunction'];
   $wstoken    = $_POST['wstoken'];
   $bu_id      = $_POST['bu_id'];
-  $creator_id      = $_POST['creator_id'];
+  $creator_id = $_POST['creator_id'];
 
   $course_category  = $_POST['course_category'];
   $course_name      = $_POST['course_full_name'];
@@ -761,7 +764,6 @@ function update_course()
   $enrollment_type  = $_POST['enroll_type'];
   $old_enroll_id    = $_POST['old_enroll_id'];
 
-
   $addonData               = new stdClass();
   $addonData->id           = $course_id;
   $addonData->coursetype   = $_POST['courseType'];
@@ -860,10 +862,12 @@ function getCourseUsers()
 function getEnrolledUsers($courseid, $moodledata)
 {
  global $CFG;
- $userids_arr = array();
- $wsfunction  = $moodledata->wsfunction;
- $wstoken     = $moodledata->wstoken;
- $server_url  = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
+ $curl_res_userids_arr             = array();
+ $bu_assigned_userids_arr = array();
+ $enrolled_users_arr      = array();
+ $wsfunction              = $moodledata->wsfunction;
+ $wstoken                 = $moodledata->wstoken;
+ $server_url              = $CFG->wwwroot . "/webservice/rest/server.php?moodlewsrestformat=json&wsfunction=$wsfunction&wstoken=$wstoken";
 
  $params = array('courseid' => $courseid);
 
@@ -872,10 +876,22 @@ function getEnrolledUsers($courseid, $moodledata)
  $json_arr      = json_decode($curl_response, true);
 
  foreach ($json_arr as $rec) {
-  $userids_arr[] = $rec['id'];
+  $curl_res_userids_arr[] = $rec['id'];
  }
 
- return $userids_arr;
+ if ($moodledata->buId) {
+  $bu_assigned_userids_arr = getBUAssignedUsers($moodledata->buId);
+ } else {
+  $enrolled_users_arr = $curl_res_userids_arr;
+ }
+
+ foreach ($bu_assigned_userids_arr as $buassuserid) {
+  if (in_array($buassuserid, $curl_res_userids_arr)) {
+   $enrolled_users_arr[] = $buassuserid;
+  }
+ }
+
+ return $enrolled_users_arr;
 }
 
 function enrollUserToCourse()

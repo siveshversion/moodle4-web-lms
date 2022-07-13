@@ -14,6 +14,33 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$BuAdmin = checkisBUAdmin(47);
+
+$moodledata             = new stdClass();
+$moodledata->wsfunction = 'core_enrol_get_enrolled_users';
+$moodledata->wstoken    = '6c55a6c123a01a545efc8c20fd3a0d8a';
+
+if ($BuAdmin) {
+ $moodledata->buId = 132;
+}
+
+if ($moodledata->buId) {
+ $bu_assigned_userids_arr = getBUAssignedUsers($moodledata->buId);
+} else {
+ $enrolled_users_arr = $userids_arr;
+}
+$participants = getEnrolledUsers(55, $moodledata);
+
+foreach($bu_assigned_userids_arr as $enrolledbuuserid){
+if(in_array($enrolledbuuserid, $participants)){
+    $enrolled_users_arr [] = $enrolledbuuserid;
+}
+}
+
+print_r($enrolled_users_arr);
+
+exit;
+
 $res = canCourseEdit(63, 47);
 
 echo $res;
