@@ -862,7 +862,7 @@ function getCourseUsers()
 function getEnrolledUsers($courseid, $moodledata)
 {
  global $CFG;
- $curl_res_userids_arr             = array();
+ $curl_res_userids_arr    = array();
  $bu_assigned_userids_arr = array();
  $enrolled_users_arr      = array();
  $wsfunction              = $moodledata->wsfunction;
@@ -3618,4 +3618,30 @@ function makeEndTimestamp($dateString)
  // added 23 hours extra as the date time will be xx-xx-xxx 00:00:00
  $timestamp = $timestamp + 23 * 3600;
  return $timestamp;
+}
+
+function getCourseDefaultImages()
+{
+ global $DB, $CFG;
+ $userid   = $_POST['userid'];
+ $response = array();
+
+ $directory = __DIR__ . '\uploads\default_course_images';
+
+ if (!is_dir($directory)) {
+  exit('Invalid diretory path');
+ }
+
+ foreach (scandir($directory) as $file) {
+  if ($file !== '.' && $file !== '..') {
+   $new_data                    = new stdClass();
+   $new_data->filename          = $file;
+   $new_data->src               = $CFG->wwwroot . '/cm/api/uploads/default_course_images/' . $file;
+   $response[]                  = $new_data;
+   $arrResults['Data']['empty'] = false;
+  }
+ }
+
+ $arrResults['Data']['cimages'] = $response;
+ return $arrResults;
 }

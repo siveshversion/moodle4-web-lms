@@ -14,6 +14,12 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$res = getCourseDefaultImages();
+
+print_r($res['Data']['cimages']);
+
+exit;
+
 $user           = $DB->get_record('user', array("id" => 48));
 $BU             = getBuByUid($user->id);
 $user->cm_bu_id = $BU->id;
@@ -42,10 +48,10 @@ if ($moodledata->buId) {
 }
 $participants = getEnrolledUsers(55, $moodledata);
 
-foreach($bu_assigned_userids_arr as $enrolledbuuserid){
-if(in_array($enrolledbuuserid, $participants)){
-    $enrolled_users_arr [] = $enrolledbuuserid;
-}
+foreach ($bu_assigned_userids_arr as $enrolledbuuserid) {
+ if (in_array($enrolledbuuserid, $participants)) {
+  $enrolled_users_arr[] = $enrolledbuuserid;
+ }
 }
 
 print_r($enrolled_users_arr);
@@ -57,8 +63,6 @@ $res = canCourseEdit(63, 47);
 echo $res;
 
 exit;
-
-
 
 //login token generation test cases
 
