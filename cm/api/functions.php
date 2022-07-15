@@ -587,7 +587,7 @@ function listCourses()
    $new_data->course_id        = $rec->id;
    $new_data->can_edit         = $canEdit;
    $participants               = getEnrolledUsers($rec->id, $moodledata);
-   $new_data->enrolled_cnt     = count($participants);
+   $new_data->enrolled_cnt     = count($participantsn);
    $response[]                 = $new_data;
    ++$i;
   }
@@ -658,6 +658,16 @@ function create_course()
     $response->id   = $rec['id'];
     $addonData->id  = $response->id;
    }
+   if (isset($_POST['logoFile']) && isset($_POST['logoFileName'])) {
+    $fileString = $_POST['logoFile'];
+    $fileName   = $_POST['logoFileName'];
+    cImage_upload($fileString, $fileName);
+    $addonData->course_img = $fileName;
+   } else if (isset($_POST['logoFileName'])) {
+    $fileName              = $_POST['logoFileName'];
+    $addonData->course_img = $fileName;
+   }
+
    $res = update_course_cm_changes($addonData);
    update_enrollment_type($addonData->id, $enrollment_type);
    if (!empty($bu_id) && ($bu_id != 'null')) {
@@ -691,8 +701,11 @@ function update_course_cm_changes($params)
   $Course->points      = (int) $params->points;
   $Course->hours       = $params->durationhrs;
   $Course->mints       = $params->durationmins;
-  $inserted            = $DB->update_record('course', $Course);
-  $arrResults['Data']  = $inserted;
+  if ($params->course_img) {
+   $Course->course_img = $params->course_img;
+  }
+  $inserted           = $DB->update_record('course', $Course);
+  $arrResults['Data'] = $inserted;
  }
  return $arrResults;
 
@@ -733,6 +746,7 @@ function get_course_by_id()
     $response->course_type   = (int) $custom_fields_data->course_type;
     $response->duration_hrs  = $custom_fields_data->hours;
     $response->duration_mins = $custom_fields_data->mints;
+    $response->course_img    = $custom_fields_data->course_img;
    }
    $arrResults['Data'] = $response;
   }
@@ -3629,6 +3643,7 @@ function getCourseDefaultImages()
  $directory = __DIR__ . '\uploads\default_course_images';
 
  if (!is_dir($directory)) {
+// mkdir("uploads/default_course_images/", 0777, true);
   exit('Invalid diretory path');
  }
 
@@ -3644,4 +3659,21 @@ function getCourseDefaultImages()
 
  $arrResults['Data']['cimages'] = $response;
  return $arrResults;
+}
+
+function cImage_upload($fileString, $fileName)
+{
+ if (!empty($fileString)) {
+  list($type, $data) = explode(';', $fileString);
+  list(, $data)      = explode(',', $data);
+
+  $directory = __DIR__ . '\uploads\default_course_images';
+
+  if (!is_dir($directory)) {
+   mkdir("uploads/default_course_images/", 0777, true);
+  }
+
+  $data = base64_decode($data);
+  file_put_contents("uploads/default_course_images/" . $fileName, $data);
+ }
 }
