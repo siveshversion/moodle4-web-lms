@@ -583,7 +583,7 @@ function listCourses()
    $new_data->category_name    = $category->name;
    $new_data->course_id        = $rec->id;
    $new_data->can_edit         = $canEdit;
-   $participants  = get_enrolled_uids($rec->id,$user);
+   $participants               = get_enrolled_uids($rec->id, $user);
    $new_data->enrolled_cnt     = count($participants);
    $response[]                 = $new_data;
    ++$i;
@@ -784,14 +784,14 @@ function update_course()
   $addonData->creator_id   = $_POST['creator_id'];
 
   if (isset($_POST['logoFile']) && isset($_POST['logoFileName'])) {
-    $fileString = $_POST['logoFile'];
-    $fileName   = $_POST['logoFileName'];
-    cImage_upload($fileString, $fileName);
-    $addonData->course_img = $fileName;
-   } else if (isset($_POST['logoFileName'])) {
-    $fileName              = $_POST['logoFileName'];
-    $addonData->course_img = $fileName;
-   }
+   $fileString = $_POST['logoFile'];
+   $fileName   = $_POST['logoFileName'];
+   cImage_upload($fileString, $fileName);
+   $addonData->course_img = $fileName;
+  } else if (isset($_POST['logoFileName'])) {
+   $fileName              = $_POST['logoFileName'];
+   $addonData->course_img = $fileName;
+  }
 
   update_course_cm_changes($addonData);
 
@@ -863,7 +863,7 @@ function getCourseUsers()
   $new_data->user_name     = $rec->username;
   $new_data->user_fullname = $rec->fullname;
   $BU                      = getBuByUid($rec->id);
-  $buName = empty($BU)?'' :  $BU->bu_name;
+  $buName                  = empty($BU) ? '' : $BU->bu_name;
   $new_data->bu_name       = $buName;
   $new_data->user_id       = $rec->id;
   $new_data->enrolled      = in_array($rec->id, $enrolled_userids_arr) ? true : false;
@@ -3603,7 +3603,8 @@ function getCatalog()
  global $DB, $CFG;
  $categories = $DB->get_records('course_categories');
  foreach ($categories as $category) {
-  $courses        = $DB->get_records('course', array('category' => $category->id, 'visible' => 1));
+  $q              = "select * from {course} where category = $category->id and visible = 1 order by id DESC ";
+  $courses        = $DB->get_records_sql($q);
   $raw_course_arr = array();
   foreach ($courses as $course) {
    $raw_course              = new stdClass();
@@ -3653,11 +3654,10 @@ function getCourseDefaultImages()
  if (DIRECTORY_SEPARATOR === '/') {
   $directory = __DIR__ . '/uploads/default_course_images';
   // unix, linux, mac
-}
-else if (DIRECTORY_SEPARATOR === '\\') {
+ } else if (DIRECTORY_SEPARATOR === '\\') {
   $directory = __DIR__ . '\uploads\default_course_images';
   // windows
-} 
+ }
 
  if (!is_dir($directory)) {
   exit('Invalid diretory path');
@@ -3684,17 +3684,16 @@ function cImage_upload($fileString, $fileName)
   list(, $data)      = explode(',', $data);
 
   if (DIRECTORY_SEPARATOR === '/') {
-    $directory = __DIR__ . '/uploads/default_course_images';
-    // unix, linux, mac
+   $directory = __DIR__ . '/uploads/default_course_images';
+   // unix, linux, mac
+  } else if (DIRECTORY_SEPARATOR === '\\') {
+   $directory = __DIR__ . '\uploads\default_course_images';
+   // windows
   }
-  else if (DIRECTORY_SEPARATOR === '\\') {
-    $directory = __DIR__ . '\uploads\default_course_images';
-    // windows
-  } 
 
   if (!is_dir($directory)) {
-    exit('Invalid diretory path');
-  //  mkdir("uploads/default_course_images/", 0777, true);
+   exit('Invalid diretory path');
+   //  mkdir("uploads/default_course_images/", 0777, true);
   }
 
   $data = base64_decode($data);
