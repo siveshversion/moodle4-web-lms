@@ -3650,10 +3650,16 @@ function getCourseDefaultImages()
  $userid   = $_POST['userid'];
  $response = array();
 
- $directory = __DIR__ . '\uploads\default_course_images';
+ if (DIRECTORY_SEPARATOR === '/') {
+  $directory = __DIR__ . '/uploads/default_course_images';
+  // unix, linux, mac
+}
+else if (DIRECTORY_SEPARATOR === '\\') {
+  $directory = __DIR__ . '\uploads\default_course_images';
+  // windows
+} 
 
  if (!is_dir($directory)) {
-// mkdir("uploads/default_course_images/", 0777, true);
   exit('Invalid diretory path');
  }
 
@@ -3677,10 +3683,18 @@ function cImage_upload($fileString, $fileName)
   list($type, $data) = explode(';', $fileString);
   list(, $data)      = explode(',', $data);
 
-  $directory = __DIR__ . '\uploads\default_course_images';
+  if (DIRECTORY_SEPARATOR === '/') {
+    $directory = __DIR__ . '/uploads/default_course_images';
+    // unix, linux, mac
+  }
+  else if (DIRECTORY_SEPARATOR === '\\') {
+    $directory = __DIR__ . '\uploads\default_course_images';
+    // windows
+  } 
 
   if (!is_dir($directory)) {
-   mkdir("uploads/default_course_images/", 0777, true);
+    exit('Invalid diretory path');
+  //  mkdir("uploads/default_course_images/", 0777, true);
   }
 
   $data = base64_decode($data);
