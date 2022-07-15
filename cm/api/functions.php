@@ -1040,6 +1040,7 @@ function mod_get_filtered_courses($arrInput)
   $arrDummyResults[$course["id"]]['progress']      = $vProgress;
   $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
   $arrDummyResults[$course["id"]]['credits']       = get_course_points($course["id"]);
+  $arrDummyResults[$course["id"]]['courseimg']     = get_course_img($course["id"]);
 
   $count++;
  }
@@ -1057,6 +1058,7 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['progress']      = $progress;
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'completed') && ($progress == 100)) {
@@ -1067,6 +1069,7 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['progress']      = $progress;
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'not_started') && ($progress == 0)) {
@@ -1077,6 +1080,7 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['progress']      = $progress;
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'in_progress') && ($progress > 0) && ($progress < 100)) {
@@ -1087,6 +1091,7 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['progress']      = $progress;
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
+   $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   }
@@ -3699,4 +3704,18 @@ function cImage_upload($fileString, $fileName)
   $data = base64_decode($data);
   file_put_contents("uploads/default_course_images/" . $fileName, $data);
  }
+}
+
+function get_course_img($cid)
+{
+ global $DB, $CFG;
+ $imgsrc = '';
+ $q      = "select course_img from {course} where id = $cid";
+ $rec    = $DB->get_record_sql($q);
+ if (!empty($rec->course_img)) {
+  $imgsrc = $CFG->wwwroot . "/cm/api/uploads/default_course_images/" . $rec->course_img;
+ } else {
+  $imgsrc = $CFG->wwwroot . "/cm/api/uploads/crs-img.jpg";
+ }
+ return $imgsrc;
 }
