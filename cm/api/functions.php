@@ -540,6 +540,10 @@ function listCourses()
  $cat_id       = $_POST['catId'];
  $userId       = $_POST['userId'];
 
+ $user           = $DB->get_record('user', array("id" => $userId));
+ $BU             = getBuByUid($userId);
+ $user->cm_bu_id = $BU->id;
+
  $siteAdmin = checkisSiteAdmin($userId);
  $BuAdmin   = checkisBUAdmin($userId);
  $canEdit   = ($siteAdmin) ? true : false;
@@ -550,13 +554,6 @@ function listCourses()
  $wstoken = $_POST['wstoken'];
 
  $categoryFilter = isset($catId) ? "category=$catId" : "category > 0";
-
- $moodledata             = new stdClass();
- $moodledata->wsfunction = $_POST['wsfunction'];
- $moodledata->wstoken    = $wstoken;
- if ($BuAdmin) {
-  $moodledata->buId = $bu_id;
- }
 
  if (isset($_POST['userId'])) {
   if (!empty($bu_id) && ($bu_id != 'null')) {
@@ -586,8 +583,8 @@ function listCourses()
    $new_data->category_name    = $category->name;
    $new_data->course_id        = $rec->id;
    $new_data->can_edit         = $canEdit;
-   $participants               = getEnrolledUsers($rec->id, $moodledata);
-   $new_data->enrolled_cnt     = count($participantsn);
+   $participants  = get_enrolled_uids($rec->id,$user);
+   $new_data->enrolled_cnt     = count($participants);
    $response[]                 = $new_data;
    ++$i;
   }

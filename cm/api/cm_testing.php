@@ -14,6 +14,16 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$userId = 2;
+$user           = $DB->get_record('user', array("id" => $userId));
+$BU             = getBuByUid($userId);
+$user->cm_bu_id = $BU->id;
+
+$participants = get_enrolled_uids(60, $user);
+
+print_r($participants);
+exit;
+
 $res = getCourseDefaultImages();
 
 print_r($res['Data']['cimages']);
