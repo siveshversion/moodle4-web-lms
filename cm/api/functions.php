@@ -852,6 +852,9 @@ function getCourseUsers()
   $new_data->sl_no         = $i;
   $new_data->user_name     = $rec->username;
   $new_data->user_fullname = $rec->fullname;
+  $BU                      = getBuByUid($rec->id);
+  $buName = empty($BU)?'' :  $BU->bu_name;
+  $new_data->bu_name       = $buName;
   $new_data->user_id       = $rec->id;
   $new_data->enrolled      = in_array($rec->id, $enrolled_userids_arr) ? true : false;
 
