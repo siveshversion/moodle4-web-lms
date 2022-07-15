@@ -783,6 +783,16 @@ function update_course()
   $addonData->durationmins = $_POST['durationMins'];
   $addonData->creator_id   = $_POST['creator_id'];
 
+  if (isset($_POST['logoFile']) && isset($_POST['logoFileName'])) {
+    $fileString = $_POST['logoFile'];
+    $fileName   = $_POST['logoFileName'];
+    cImage_upload($fileString, $fileName);
+    $addonData->course_img = $fileName;
+   } else if (isset($_POST['logoFileName'])) {
+    $fileName              = $_POST['logoFileName'];
+    $addonData->course_img = $fileName;
+   }
+
   update_course_cm_changes($addonData);
 
   update_enrollment_type($course_id, $enrollment_type);
