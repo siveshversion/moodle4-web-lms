@@ -1041,6 +1041,10 @@ function mod_get_filtered_courses($arrInput)
   $arrDummyResults[$course["id"]]['overviewfiles'] = $course["overviewfiles"];
   $arrDummyResults[$course["id"]]['credits']       = get_course_points($course["id"]);
   $arrDummyResults[$course["id"]]['courseimg']     = get_course_img($course["id"]);
+  $enroll_res                                      = get_enrollment_type($course["id"]);
+  $enroll_type                                     = ($enroll_res === 'self') ? 'self' : 'admin';
+  $arrDummyResults[$course["id"]]['enrolltype']    = $enroll_type;
+  $arrDummyResults[$course["id"]]['ratings']       = getCourseAvgRating($course["id"]);
 
   $count++;
  }
@@ -1059,6 +1063,8 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
    $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
+   $arrResults['Data'][$count]['enrolltype']    = $course["enrolltype"];
+   $arrResults['Data'][$count]['ratings']       = $course["ratings"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'completed') && ($progress == 100)) {
@@ -1070,6 +1076,8 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
    $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
+   $arrResults['Data'][$count]['enrolltype']    = $course["enrolltype"];
+   $arrResults['Data'][$count]['ratings']       = $course["ratings"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'not_started') && ($progress == 0)) {
@@ -1081,6 +1089,8 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
    $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
+   $arrResults['Data'][$count]['enrolltype']    = $course["enrolltype"];
+   $arrResults['Data'][$count]['ratings']       = $course["ratings"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   } else if (($filtertype == 'in_progress') && ($progress > 0) && ($progress < 100)) {
@@ -1092,6 +1102,8 @@ function mod_get_filtered_courses($arrInput)
    $arrResults['Data'][$count]['overviewfiles'] = $course["overviewfiles"];
    $arrResults['Data'][$count]['credits']       = $course["credits"];
    $arrResults['Data'][$count]['courseimg']     = $course["courseimg"];
+   $arrResults['Data'][$count]['enrolltype']    = $course["enrolltype"];
+   $arrResults['Data'][$count]['ratings']       = $course["ratings"];
    $arrResults['Data'][$count]['status']        = 1;
    $count++;
   }
@@ -3718,4 +3730,18 @@ function get_course_img($cid)
   $imgsrc = $CFG->wwwroot . "/cm/api/uploads/crs-img.jpg";
  }
  return $imgsrc;
+}
+
+function getCourseAvgRating($cid)
+{
+ global $DB, $CFG;
+ //'Not Rated Yet'
+ $avgRating = -1;
+ $q         = "SELECT ROUND(AVG(ratingnumber),1) as avg_rating FROM `mdl_course_rating` where courseid = $cid";
+ $res       = $DB->get_record_sql($q);
+
+ if (!empty($res)) {
+  $avgRating = $res->avg_rating;
+ }
+ return $avgRating;
 }
