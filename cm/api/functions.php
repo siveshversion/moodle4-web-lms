@@ -3627,6 +3627,12 @@ function getCatalog()
    $raw_course              = new stdClass();
    $raw_course->course_id   = $course->id;
    $raw_course->course_name = $course->fullname;
+   $raw_course->points      = get_course_points($course->id);
+   $raw_course->courseimg   = get_course_img($course->id);
+   $enroll_res              = get_enrollment_type($course->id);
+   $enroll_type             = ($enroll_res === 'self') ? 'self' : 'admin';
+   $raw_course->enrolltype  = $enroll_type;
+   $raw_course->ratings     = getCourseAvgRating($course->id);
    $raw_course_arr[]        = $raw_course;
   }
   $raw_category                = new stdClass();
