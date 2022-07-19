@@ -675,7 +675,8 @@ function create_course()
     $params->wstoken   = $wstoken;
     AddCoursetoBU($params);
     if ($enrollBuUsersChk) {
-     EnrollBUCoursetoUsers($params);
+    // bulk BU user enrollment
+    //  EnrollBUCoursetoUsers($params);
     }
    }
    $arrResults['Data'] = $response;
