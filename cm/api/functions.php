@@ -1306,13 +1306,23 @@ function listLP()
   $append_query = "AND buid = $buId";
   $bu           = $DB->get_record('cm_business_units', array('id' => $buId));
  }
- $BuName = (empty($bu)) ? 'Learnospace' : $bu->bu_name;
+
  if (isset($_POST['userId'])) {
-  $q   = "select id,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active' $append_query";
+  $q   = "select id,buid,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active' $append_query order by id DESC";
   $lps = $DB->get_records_sql($q);
   foreach ($lps as $rec) {
    $new_data                 = new stdClass();
    $new_data->lp_name        = $rec->lpname;
+   if($rec->buid)
+   {
+    $q1 = "Select * from {$CFG->prefix}cm_business_units where id= $rec->buid";
+    $burec = $DB->get_record_sql($q1);
+    $BuName = $burec->bu_name;             
+   }
+   else{
+    $BuName = 'Learnospace';
+   }
+
    $new_data->lp_bu          = $BuName;
    $new_data->lp_id          = $rec->id;
    $new_data->lp_courses_cnt = getLPCourseCnt($rec->id);

@@ -14,6 +14,14 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+
+$_POST['userId'] = 2;
+$res =listLP();
+
+print_r($res);
+
+exit;
+
 $res = getCourseDefaultImages();
 
 print_r($res['Data']['cimages']);
