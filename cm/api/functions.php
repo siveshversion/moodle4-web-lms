@@ -1436,6 +1436,34 @@ function listLPCourses()
  return $arrResults;
 }
 
+function getLPCoursesReport()
+{
+ global $DB, $CFG;
+ $response = array();
+ $lpid = $_POST['lpId'];
+ 
+ if(!empty($lpid))
+ {
+$q  = "SELECT id as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpid";
+$lp_courseids  = $DB->get_records_sql($q);
+ }
+
+  foreach ($lp_courseids as $rec) {
+   $new_data                   = new stdClass();
+   $q0 = "Select * from {course} where id= $rec->cid";
+   $course  = $DB->get_record_sql($q0);
+   $q1 = "Select * from {cm_admin_learning_path} where id= $lpid";
+   $lp  = $DB->get_record_sql($q1);
+   $new_data->course_fullname  = $course->fullname;
+   $new_data->lp_name  = $lp->lpname;
+   $response[] = $new_data;
+
+  }
+  $arrResults['Data'] = $response;
+ return $arrResults;
+}
+
+
 function getLPCourseCnt($lpid)
 {
  global $DB, $CFG;

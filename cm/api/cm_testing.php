@@ -14,23 +14,27 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$_POST['lpId'] = 24;
+$res = getLPCoursesReport();
 
-$userId = 2;
+print_r($res);
+exit;
+
+$userId         = 2;
 $user           = $DB->get_record('user', array("id" => $userId));
 $BU             = getBuByUid($userId);
 $user->cm_bu_id = $BU->id;
 
-$newData->enrolled_cnt    = get_custom_enrolled_users(60, $user);
+$newData->enrolled_cnt = get_custom_enrolled_users(60, $user);
 // $newData->completed_cnt   = get_progress_by_cid(60, $user, 100);
-$newData->inprogress_cnt  = get_progress_by_cid(60, $user, 50);
-$newData->notstarted_cnt  = get_progress_by_cid(60, $user, 0);
+$newData->inprogress_cnt = get_progress_by_cid(60, $user, 50);
+$newData->notstarted_cnt = get_progress_by_cid(60, $user, 0);
 
 print_r($newData);
 exit;
 
-
 $_POST['userId'] = 2;
-$res =listLP();
+$res             = listLP();
 
 print_r($res);
 
@@ -42,9 +46,7 @@ print_r($res['Data']['cimages']);
 
 exit;
 
-
-
-$userId = 2;
+$userId         = 2;
 $user           = $DB->get_record('user', array("id" => $userId));
 $BU             = getBuByUid($userId);
 $user->cm_bu_id = $BU->id;
@@ -53,7 +55,6 @@ $participants = get_enrolled_uids(60, $user);
 
 print_r($participants);
 exit;
-
 
 $user           = $DB->get_record('user', array("id" => 48));
 $BU             = getBuByUid($user->id);
@@ -73,20 +74,20 @@ $moodledata->wsfunction = 'core_enrol_get_enrolled_users';
 $moodledata->wstoken    = '6c55a6c123a01a545efc8c20fd3a0d8a';
 
 if ($BuAdmin) {
- $moodledata->buId = 132;
+  $moodledata->buId = 132;
 }
 
 if ($moodledata->buId) {
- $bu_assigned_userids_arr = getBUAssignedUsers($moodledata->buId);
+  $bu_assigned_userids_arr = getBUAssignedUsers($moodledata->buId);
 } else {
- $enrolled_users_arr = $userids_arr;
+  $enrolled_users_arr = $userids_arr;
 }
 $participants = getEnrolledUsers(55, $moodledata);
 
 foreach ($bu_assigned_userids_arr as $enrolledbuuserid) {
- if (in_array($enrolledbuuserid, $participants)) {
-  $enrolled_users_arr[] = $enrolledbuuserid;
- }
+  if (in_array($enrolledbuuserid, $participants)) {
+    $enrolled_users_arr[] = $enrolledbuuserid;
+  }
 }
 
 print_r($enrolled_users_arr);
