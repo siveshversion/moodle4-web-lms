@@ -1321,7 +1321,7 @@ function listLP()
     $BuName = $burec->bu_name;             
    }
    else{
-    $BuName = 'Learnospace';
+    $BuName = '';
    }
 
    $new_data->lp_bu          = $BuName;
@@ -1404,7 +1404,7 @@ function listLPCourses()
  $i                      = 1;
  $lpid                   = $_POST['lp_id'];
  if (isset($lpid)) {
-  $q       = "SELECT * FROM {course} where visible=1 and $categoryFilter";
+  $q       = "SELECT * FROM {course} where visible=1 and $categoryFilter order by id DESC";
   $courses = $DB->get_records_sql($q);
   foreach ($courses as $rec) {
    $new_data                   = new stdClass();
@@ -1731,7 +1731,7 @@ function getMyEnrolledLPs()
  }
 
  if (!empty($lpids)) {
-  $q1     = "SELECT * FROM {$CFG->prefix}cm_admin_learning_path where id in($lpids)";
+  $q1     = "SELECT * FROM {$CFG->prefix}cm_admin_learning_path where id in($lpids) order by id desc";
   $lp_res = $DB->get_records_sql($q1);
   foreach ($lp_res as $rec) {
    $new_data           = new stdClass();
