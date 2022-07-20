@@ -15,6 +15,20 @@ global $DB, $CFG;
 echo '<pre>';
 
 
+$userId = 2;
+$user           = $DB->get_record('user', array("id" => $userId));
+$BU             = getBuByUid($userId);
+$user->cm_bu_id = $BU->id;
+
+$newData->enrolled_cnt    = get_custom_enrolled_users(60, $user);
+// $newData->completed_cnt   = get_progress_by_cid(60, $user, 100);
+$newData->inprogress_cnt  = get_progress_by_cid(60, $user, 50);
+$newData->notstarted_cnt  = get_progress_by_cid(60, $user, 0);
+
+print_r($newData);
+exit;
+
+
 $_POST['userId'] = 2;
 $res =listLP();
 
@@ -22,7 +36,7 @@ print_r($res);
 
 exit;
 
-$res = getCourseDefaultImages();
+$res = courseReport();
 
 print_r($res['Data']['cimages']);
 
