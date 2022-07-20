@@ -1,0 +1,703 @@
+<?php
+
+
+require_once('../../config.php');
+
+
+global $CFG , $DB , $USER;
+ $site = get_site();
+/*
+if ($CFG->forcelogin) {
+    require_login();
+}
+*/
+ echo $OUTPUT->header();
+ 
+ if(isset($_GET["centerid"])){
+	 $vCenterId = $_GET["centerid"];
+	 
+ }
+$PAGE->set_heading($site->fullname);
+
+    
+
+	echo $OUTPUT->heading('');
+	echo '<br>' ;
+		
+	 $uidd = $_GET["id"] ;	
+	 $uid = $_GET["uid"] ;	
+		
+	if($_REQUEST['submit'] != ''){
+		global $DB, $USER, $CFG ;
+		
+
+   
+  $errorMsg ='';
+   if (empty($_REQUEST['fname'])) {
+    $nameErr = "Name is required";
+    $errorMsg .= "Name is required";
+   }
+  
+  if (empty($_REQUEST["email"])) {
+    $emailErr = "Email is required";
+    $errorMsg .= "Email is required";
+  } 
+  
+  if (!empty($_REQUEST["email"])) {
+  if (!preg_match(
+    "/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i", 
+    $_REQUEST["email"])){
+      $emailfrmtErr = "Invalid email format";
+      $errorMsg .= "Invalid email format";
+    }
+  }
+
+
+
+	$sql = 'select * from {cm_enquery} where email = ?';	
+	$result = $DB->record_exists_sql($sql, array('email'=>$_REQUEST["email"]));  
+	$sql2 = 'select * from {user} where deleted = ? and email = ?';
+	$result2 = $DB->record_exists_sql($sql2, array('deleted' => 0 ,'email'=>$_REQUEST["email"]));
+	if($result == 1 || $result2 == 1){
+		$emailErr = "Email Id Already exists.";
+		 $errorMsg .= "Invalid email format";
+	}
+	
+  /*if (empty($_REQUEST["phnumber"])) {
+    $phnumErr = "Phone Number is required";
+	 $errorMsg .= "required";
+  } */
+	
+if (!empty($_REQUEST["phnumber"])) {
+  if (!preg_match('/^[0-9]{10}+$/', $_REQUEST["phnumber"])){
+	 $phnumfrmtErr = "Invalid Phone Number";
+	  $errorMsg .= "required";
+  }
+}
+
+  if (empty($_REQUEST["college"])) {
+    $clgErr = "College is required";
+	 $errorMsg .= "required";
+  } 
+  
+   /* if (empty($_REQUEST["year"])) {
+    $yearErr = "Year is required";
+	 $errorMsg .= "required";
+  }*/
+  
+  /*if (empty($_REQUEST["qualification"])) {
+    $qualifyErr = "Qualification is required";
+	 $errorMsg .= "required";
+  } */
+  
+   if (empty($_REQUEST["center"])) {
+    $centerErr = "Center is required";
+	 $errorMsg .= "required";
+  } else{
+	  $vCenterId = $_REQUEST["center"];
+	  $query = "select count(id) as active_users from {$CFG->prefix}user where centerid = $vCenterId and confirmed = 1 and deleted = 0 and suspended = 0";	  
+		$vActiveUsers = $DB->count_records_sql($query);
+		//Get center active users count
+		$objCenter = $DB->get_record('cm_centers',array("id"=>$vCenterId));
+		
+			if($objCenter->seat <= $vActiveUsers){
+				  $centerErr = "No seats available";
+				$errorMsg .= "No seats available";
+			}
+			
+  }
+  
+  
+   /*if (empty($_REQUEST["specialisation"])) {
+    $specErr = "Specialisation is required";
+	 $errorMsg .= "required";
+  }   */
+  
+  if (empty($_REQUEST["profession"])) {
+    $profesErr = "Profession is required";
+	 $errorMsg .= "required";
+  } 
+
+/*  if (empty($_REQUEST["empstatus"])) {
+    $empstsErr = "Employment Status is required";
+	 $errorMsg .= "required";
+  } 
+
+  if (empty($_REQUEST["graduate"])) {
+    $gradErr = "First Graduate is required";
+	 $errorMsg .= "required";
+  } 
+  
+ 
+  
+if (!empty($_REQUEST["aadhaar"])) {
+  if (!is_numeric($_REQUEST["aadhaar"])){
+	 $aadharfrmtErr = "Invalid Aadhaar Number";
+	  $errorMsg .= "required";
+  }
+}
+
+ if (!empty($_REQUEST["aadhaar"])) {
+  if (!preg_match('/^[0-9]{12}+$/', $_REQUEST["aadhaar"])){
+	 $aadharfrmtErr = "Invalid Aadhaar Number";
+	  $errorMsg .= "required";
+  }
+}*/
+  
+   if($errorMsg == ''){
+   
+		//upload resume 
+		/*if(!empty($_FILES['resume']['name'])){
+			 
+      $errors= '';
+      $file_name = $_FILES['resume']['name'];
+      $file_size =$_FILES['resume']['size'];
+      $file_tmp =$_FILES['resume']['tmp_name'];
+      $file_type=$_FILES['resume']['type'];
+      $file_ext=strtolower(end(explode('.',$_FILES['resume']['name'])));
+      
+      $extensions= array("pdf","docx");
+      
+      if(in_array($file_ext,$extensions)=== false){
+         $errors .="extension not allowed, please choose a JPEG or PNG file.";
+      }
+     if(($file_ext =='xls')||($file_ext =='xlxs')){
+				 $errors. ="extension not allowed, please choose a pdf or docx file.";
+	 }
+      
+      if(empty($errors)==true){
+		   $resumefile_name = rand(0, 9999).$file_name;
+         move_uploaded_file($file_tmp,"uploadresumes/".$resumefile_name);
+        
+      }else{
+        $errors .= 'file not upload';
+      }
+    }*/
+	    
+		$ue = new stdClass();
+		$ue->name = $_REQUEST['fname'] ;
+		$ue->email = $_REQUEST['email'] ;
+		$ue->phnumber = $_REQUEST['phnumber'] ;
+		$ue->college = $_REQUEST['college'] ;
+		$ue->year = $_REQUEST['year'] ;
+		$ue->gender = $_REQUEST['gender'] ;
+		$ue->qualification = $_REQUEST['qualification'] ;
+		$ue->specialisation = $_REQUEST['specialisation'] ;
+		$ue->profession = $_REQUEST['profession'] ;
+		$ue->empstatus = $_REQUEST['empstatus'] ;
+		$ue->address = $_REQUEST['address'] ;
+		$ue->community = $_REQUEST['community'] ;
+		$ue->graduate = $_REQUEST['graduate'] ;
+		$ue->aadhaar = $_REQUEST['aadhaar'] ;
+		$ue->centerid= $_REQUEST['center'];
+		if(!empty($_FILES['resume']['name'])){
+		    $ue->resume = $resumefile_name;
+		}
+        $ueinst = $DB->insert_record('cm_enquery', $ue);
+	  
+	    if(isset($ueinst)){
+			
+		$masterData = new stdClass();
+        $masterData->auth="manual";
+        $masterData->confirmed='1';
+        $masterData->policyagreed='0';
+        $masterData->deleted='0';
+        $masterData->suspended='1';
+        $masterData->mnethostid='1';
+        $masterData->username=$_REQUEST['email'];
+		$masterData->password = hash_internal_user_password('Learn@123');
+		$masterData->idnumber = '';
+        $masterData->firstname = $_REQUEST['fname'];
+        $masterData->lastname = $_REQUEST['fname'];
+        $masterData->email = $_REQUEST['email'];
+        $masterData->emailstop='0';
+        $masterData->icq='0';
+        $masterData->skype='0';
+        $masterData->yahoo='0';
+        $masterData->aim='0';
+        $masterData->msn='0';
+		$masterData->phone1 = $_REQUEST['phnumber'];
+        $masterData->phone2='0';
+        $masterData->institution='0';
+        $masterData->department='0';
+        $masterData->address=$_REQUEST['address'];
+		$masterData->city= '';
+		$masterData->country='';
+        $masterData->lang='en';
+        $masterData->timezone='99';
+        $masterData->theme='';
+        $masterData->firstaccess=time();
+        $masterData->lastaccess=time();
+        $masterData->lastlogin='0';
+        $masterData->currentlogin='0';
+        $masterData->lastip='0';
+        $masterData->secret='0';
+        $masterData->picture='';
+        $masterData->url='';
+        $masterData->calendartype = 'gregorian';
+        $masterData->description='';
+        $masterData->descriptionformat='1';
+        $masterData->mailformat='1';
+        $masterData->maildigest='0';
+        $masterData->maildisplay='1';
+        $masterData->autosubscribe='1';
+        $masterData->trackforums='0';
+        $masterData->timecreated=time();
+        $masterData->timemodified= time();
+        $masterData->trustbitmask='0';
+        $masterData->imagealt='';
+        $masterData->lastnamephonetic='';
+        $masterData->firstnamephonetic='';
+        $masterData->middlename='';
+        $masterData->alternatename='';
+		$masterData->centerid= $_REQUEST['center'];
+      
+        $datas->id = $DB->insert_record('user', $masterData);
+		
+			 if(isset($datas->id)){
+				 
+				$nusers = new stdClass();
+				$nusers->userid = $datas->id;
+				$nusers->name = "auth_forcepasswordchange";
+				$nusers->value = "1";
+				$DB->insert_record('user_preferences', $nusers);
+				 
+				 $selcenter = $_REQUEST['center'];
+				 $centuser = $DB->get_record_sql("select id from {user} where role = 1 and centerid = $selcenter");
+				
+				$userdata = $DB->get_record('user', array('id' => $centuser->id));
+				$supportuser = \core_user::get_support_user();
+				
+				$a = new stdClass();
+				$a->firstname   = $userdata->firstname;
+				$a->username   = $userdata->username;
+				$a->coursename  = $coursedata->fullname;
+				$a->urllink    = $CFG->wwwroot .'/login/index.php';
+			
+			    $message = 'User registration notification send successfully';
+				$subject = 'User Registration Notification';
+				email_to_user($userdata, $supportuser, $subject, $message);	
+				
+				if(!empty($USER->id)){
+				redirect('manageusers.php' ,'Your registration has been submitted successfully. The administrator will send the response to your registered email id shortly',5);
+				} else {
+				redirect("$CFG->wwwroot/login/index.php" ,'Your registration has been submitted successfully. The administrator will send the response to your registered email id shortly',5);	
+				}
+			}	 
+		}
+	}
+}
+
+
+
+
+if($_REQUEST['update'] != ''){
+global $DB ;
+		
+ 
+  $errorMsg ='';
+   if (empty($_REQUEST['fname'])) {
+    $nameErr = "Name is required";
+    $errorMsg .= "Name is required";
+   }
+  
+  if (empty($_REQUEST["email"])) {
+    $emailErr = "Email is required";
+    $errorMsg .= "Email is required";
+  } 
+  
+  if (!empty($_REQUEST["email"])) {
+  if (!preg_match(
+    "/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i", 
+    $_REQUEST["email"])){
+      $emailfrmtErr = "Invalid email format";
+      $errorMsg .= "Invalid email format";
+    }
+  }
+     $alreadter = $_REQUEST["email"];
+	$sql = "select * from {cm_enquery} where email = '$alreadter' and id != $uidd ";	
+	$result = $DB->record_exists_sql($sql);  
+	$sql2 = "select * from {user} where email = '$alreadter' and id != $uid  and deleted = 0";
+	$result2 = $DB->record_exists_sql($sql2); 
+	if($result == 1 || $result2 == 1){
+		$emailErr = "Email Id Already exists.";
+		 $errorMsg .= "Invalid email format";
+	}
+	
+  if (empty($_REQUEST["phnumber"])) {
+    $phnumErr = "Phone Number is required";
+	 $errorMsg .= "required";
+  } 
+	
+if (!empty($_REQUEST["phnumber"])) {
+  if (!preg_match('/^[0-9]{10}+$/', $_REQUEST["phnumber"])){
+	 $phnumfrmtErr = "Invalid Phone Number";
+	  $errorMsg .= "required";
+  }
+}
+
+  if (empty($_REQUEST["college"])) {
+    $clgErr = "College is required";
+	 $errorMsg .= "required";
+  } 
+  
+    if (empty($_REQUEST["year"])) {
+    $yearErr = "Year is required";
+	 $errorMsg .= "required";
+  }
+  
+  if (empty($_REQUEST["qualification"])) {
+    $qualifyErr = "Qualification is required";
+	 $errorMsg .= "required";
+  } 
+  
+  if (empty($_REQUEST["center"])) {
+    $centerErr = "Center is required";
+	 $errorMsg .= "required";
+  } 
+  
+   if (empty($_REQUEST["specialisation"])) {
+    $specErr = "Specialisation is required";
+	 $errorMsg .= "required";
+  }   
+  
+  if (empty($_REQUEST["profession"])) {
+    $profesErr = "Profession is required";
+	 $errorMsg .= "required";
+  } 
+
+  if (empty($_REQUEST["empstatus"])) {
+    $empstsErr = "Employment Status is required";
+	 $errorMsg .= "required";
+  } 
+
+  if (empty($_REQUEST["graduate"])) {
+    $gradErr = "First Graduate is required";
+	 $errorMsg .= "required";
+  } 
+  
+
+  
+if (!empty($_REQUEST["aadhaar"])) {
+  if (!is_numeric($_REQUEST["aadhaar"])){
+	 $aadharfrmtErr = "Invalid Aadhaar Number";
+	  $errorMsg .= "required";
+  }
+}
+
+ if (!empty($_REQUEST["aadhaar"])) {
+  if (!preg_match('/^[0-9]{12}+$/', $_REQUEST["aadhaar"])){
+	 $aadharfrmtErr = "Invalid Aadhaar Number";
+	  $errorMsg .= "required";
+  }
+}
+ 
+  
+   if($errorMsg == ''){
+   
+ 
+		$ue = new stdClass();
+		$ue->id = $uidd ;
+		$ue->name = $_REQUEST['fname'] ;
+		$ue->email = $_REQUEST['email'] ;
+		$ue->phnumber = $_REQUEST['phnumber'] ;
+		$ue->college = $_REQUEST['college'] ;
+		$ue->year = $_REQUEST['year'] ;
+		$ue->gender = $_REQUEST['gender'] ;
+		$ue->qualification = $_REQUEST['qualification'] ;
+		$ue->specialisation = $_REQUEST['specialisation'] ;
+		$ue->profession = $_REQUEST['profession'] ;
+		$ue->empstatus = $_REQUEST['empstatus'] ;
+		$ue->address = $_REQUEST['address'] ;
+		$ue->community = $_REQUEST['community'] ;
+		$ue->graduate = $_REQUEST['graduate'] ;
+		$ue->aadhaar = $_REQUEST['aadhaar'] ;
+		$ue->centerid= $_REQUEST['center'];
+		if(!empty($_FILES['resume']['name'])){
+			
+					//upload resume 
+				if(!empty($_FILES['resume']['name'])){
+			  $errors= array();
+			  $file_name = $_FILES['resume']['name'];
+			  $file_size =$_FILES['resume']['size'];
+			  $file_tmp =$_FILES['resume']['tmp_name'];
+			  $file_type=$_FILES['resume']['type'];
+			  $file_ext=strtolower(end(explode('.',$_FILES['resume']['name'])));
+			  
+			  $extensions= array("pdf","docx");
+			  
+			  if(in_array($file_ext,$extensions)=== false){
+				 $errors[]="extension not allowed, please choose a JPEG or PNG file.";
+			  }
+			/*if(($file_ext =='xls')||($file_ext =='xlxs')){
+				 $errors[]="extension not allowed, please choose a pdf or docx file.";
+			  }*/
+			  
+			  if(empty($errors)==true){
+				   $resumefile_name = rand(0, 9999).$file_name;
+				 move_uploaded_file($file_tmp,"uploadresumes/".$resumefile_name);
+				
+			  }else{
+				 print_r($errors);
+			  }
+			}
+		   $ue->resume = $resumefile_name;
+		}
+		
+		 
+        $upat = $DB->update_record('cm_enquery', $ue);
+	   
+	   if(isset($upat)){
+				
+		$masterData = new stdClass();
+        $masterData->id=$uid;
+        $masterData->username=$_REQUEST['email'];
+        $masterData->firstname = $_REQUEST['fname'];
+        $masterData->lastname = $_REQUEST['fname'];
+        $masterData->email = $_REQUEST['email'];
+		$masterData->phone1 = $_REQUEST['phnumber'];
+        $masterData->address=$_REQUEST['address'];
+		$masterData->centerid= $_REQUEST['center'];
+        $masterData->lastaccess=time();
+        $masterData->timemodified= time();
+        $datas = $DB->update_record('user', $masterData);
+			 if(isset($datas)){
+			redirect('manageusers.php' ,'Data is Updated Successfully..',5);
+			 }
+    	}
+
+    }
+}	
+		
+		
+		?>
+		<style>
+		#update {
+    background: #306190;
+    color: #fff;
+    margin-right: 25px;
+}
+		
+	#page-header {
+	display : none;
+	margin-bottom:25px;
+   }
+   </style>
+<link rel="stylesheet" type="text/css" href="css/formstyle.css">  
+    <div style="font-size: 20px;margin-left: 3%;margin-right: 3%;background-color: #838383;color: #fff;padding: 5px 15px;">  Registration Form</div>
+	
+	<?php
+	if($USER->id == ''){
+	?>
+		<div style="text-align:center;width:100%;margin-left:20px;">
+		<div class="active_step"><a style="color:#ffffff" href="./registration_step_1.php">1. Choose Center</a></div>
+		<div class="active_step">2. Personal Details</div>
+	</div>
+	<?php
+	}
+	?>
+	
+	<div style="clear:both"></div>
+	<?php 
+	if(!empty($uidd)) {
+	$usersdata = $DB->get_record_sql("select * from {cm_enquery} where id = $uidd");
+	}
+	?>
+	
+    <div class="main">
+
+        <div class="container1">
+            <div class="signup-content">
+
+                <div class="signup-form">
+                    <form method="POST" class="register-form" id="register-form"  enctype="multipart/form-data">
+					
+                        <div class="form-row">
+						
+                            <div class="form-group" style="padding: 27px;border-radius: 2px;margin-right: 20px;width: 90%;">
+                                <div class="form-input">
+                                    <label for="fname" class="required">Name</label>
+                                    <input style="width:400px" type="text" name="fname" id="fname" placeholder="Enter Your Name"  value="<?php if(!empty($uidd)) { echo $usersdata->name ; } else { echo $_REQUEST['fname'] ;} ?>" />
+									<span style='color:red'><?php echo $nameErr ; ?></span>
+                                </div>
+                              
+                                <div class="form-input">
+                                    <label for="email" class="required">Email</label>
+                                    <input style="width:400px" type="text" name="email" id="email" placeholder="Enter Your Email Id"  value="<?php if(!empty($uidd)) { echo $usersdata->email ; } else { echo $_REQUEST['email'] ;} ?>" />
+									<span style='color:red'><?php echo $emailErr ; ?></span>
+									<span style='color:red'><?php echo $emailfrmtErr ; ?></span>
+                                </div>
+                                <div class="form-input">
+                                    <label for="phnumber" class="">Contact number</label>
+                                    <input style="width:400px" type="text" name="phnumber" id="phnumber" placeholder="Enter Your Contact Number" maxlength=10 value="<?php if(!empty($uidd)) {  echo $usersdata->phnumber ; } else { echo $_REQUEST['phnumber'];}  ?>"/>
+									<span style='color:red'><?php echo $phnumErr ; ?></span>
+									<span style='color:red'><?php echo $phnumfrmtErr ; ?></span>
+                                </div>
+								
+								  <div class="form-input">
+                                    <label for="college" class="required">Organisational Name</label>
+                                    <input style="width:400px" type="text" name="college" id="college" placeholder="Enter Your College" value="<?php  if(!empty($uidd)) { echo $usersdata->college ; } else { echo $_REQUEST['college'];}  ?>" />
+									<span style='color:red'><?php echo $clgErr ; ?></span>
+                                </div>
+
+								
+								 <div class="form-radio">
+                                    <div class="label-flex">
+                                        <label for="gender">Gender<span style="color: #5a5959;font-size: 12px;text-transform: lowercase;margin-left: 7px;font-weight: 500;">Click Your Gender</span></label>
+                                    </div>
+                                    <div class="form-radio-group">            
+                                        <div class="form-radio-item">
+                                            <input type="radio" name="gender" id="male" <?php if(!empty($uidd)) { if($usersdata->gender == 'Male') { ?> checked="checked" <?php } } else { if($_REQUEST['gender'] == 'Male') {  ?>checked="checked" <?php } }?>  value="Male">
+                                            <label for="male">Male</label>
+                                            <span class="check"></span>
+                                        </div>
+                                        <div class="form-radio-item">
+                                            <input type="radio" name="gender" id="female" <?php if(!empty($uidd)) { if($usersdata->gender == 'Female') { ?> checked="checked" <?php } } else { if($_REQUEST['gender'] == 'Female') { ?> checked="checked" <?php } }?> value="Female">
+                                            <label for="female">Female</label>
+                                            <span class="check"></span>
+                                        </div> 
+										<div class="form-radio-item">
+                                            <input type="radio" name="gender" id="other" <?php if($usersdata->gender == 'Other') { ?> checked="checked" <?php } else { if($_REQUEST['gender'] == 'Female') { ?> checked="checked" <?php } } ?> value="Other">
+                                            <label for="other">Other</label>
+                                            <span class="check"></span>
+                                        </div>
+                                    </div>
+                                </div>
+								
+								 <div class="form-select">
+                                    <div class="label-flex">
+                                        <label for="qualification" class="">Qualification</label>
+                                    </div>	
+                                    <div class="select-list">
+                                        <select name="qualification" id="qualification">
+                                            <option  value="0">Select Your Qualification</option>
+                                            <option <?php if(!empty($uidd)) { if($usersdata->qualification == 'Bachelor in engineering') { ?> selected="selected" <?php } } else { if($_REQUEST['qualification'] == 'Bachelor in engineering') { ?> selected="selected" <?php } } ?> value="Bachelor in engineering">Bachelor in engineering</option>
+
+                                            <option <?php if(!empty($uidd)) { if($usersdata->qualification == 'Master in engineering') { ?> selected="selected" <?php } }else {  if($_REQUEST['qualification'] == 'Master in engineering') { ?> selected="selected" <?php } }?> value="Master in engineering">Master in engineering</option>
+                                            <option <?php if(!empty($uidd)) { if($usersdata->qualification == 'Vocational') { ?> selected="selected" <?php } } else { if($_REQUEST['qualification'] == 'Vocational') { ?> selected="selected" <?php } } ?> value="Vocational">Vocational</option>
+											<option <?php  if(!empty($uidd)) { if($usersdata->qualification == 'Diploma') { ?> selected="selected" <?php } }else { if($_REQUEST['qualification'] == 'Diploma') {  ?>  selected="selected" <?php }} ?> value="Diploma">Diploma</option>
+                                        </select>
+                                    </div>
+									<span style='color:red'><?php echo $qualifyErr ; ?></span>
+                                </div>
+								
+								
+												 <div class="form-select">
+                                    <div class="label-flex">
+                                        <label for="profession" class="required">User Category</label>
+                                    </div>	
+                                    <div class="select-list">
+                                        <select name="profession" id="profession">
+                                            <option value="0">Select Your Profession</option>
+                                            <option <?php  if(!empty($uidd)) { if($usersdata->profession == 'Student') { ?> selected="selected" <?php } } else { if($_REQUEST['profession'] == 'Student') {  ?>  selected="selected" <?php } } ?> value="Student">Student</option>
+                                            <option <?php if(!empty($uidd)) { if($usersdata->profession == 'Faculty') { ?> selected="selected" <?php } } else { if($_REQUEST['profession'] == 'Faculty') { ?> selected="selected" <?php } } ?>  value="Faculty">Faculty</option>
+                                            <option <?php if(!empty($uidd)) { if($usersdata->profession == 'Industry') { ?> selected="selected" <?php } } else { if($_REQUEST['profession'] == 'Industry') { ?> selected="selected" <?php } } ?> value="Industry">Industry</option>
+                                        </select>
+                                    </div>
+									<span style='color:red'><?php echo $profesErr ; ?></span>
+                                </div>
+								
+								
+								
+
+								
+								 <div class="form-select">
+                                    <div class="label-flex">
+                                        <label for="qualification" class="required">Center</label>
+                                    </div>	
+                                    <div class="select-list">
+									<?php
+									if($vCenterId == ''){
+									?>
+                                        <select name="center" id="center">
+                                            
+                                           <?php 
+										   if(!empty($uid)) {
+										   $uscenter = $DB->get_record_sql("select centerid from {user} where id = $uid");
+										   }
+										   if($USER->centerid != ''){
+										   $centers = $DB->get_records_sql("select id,cen_name from {cm_centers} where id = $USER->centerid ");
+										   } else {
+											$centers = $DB->get_records_sql("select id,cen_name from {cm_centers} ");  
+											?> <option  value="0">Select Your Center</option> <?php
+										   }
+                                        foreach ($centers as $center) {
+											?>
+                                           <option <?php if(!empty($uid)) { if($uscenter->centerid == $center->id) { ?>  selected="selected" <?php } }else { if($_REQUEST['center'] == $center->id) {  ?>  selected="selected" <?php } }?> value="<?php  echo $center->id ; ?>"><?php echo $center->cen_name ; ?></option>
+										<?php } ?>
+                                        </select>
+										<?php
+									}else{
+											$centers = $DB->get_records_sql("select id,cen_name from {cm_centers} where id = $vCenterId ");  
+										echo '<select name="center" id="center">';
+										 foreach ($centers as $center) {
+											 if($center->id == $vCenterId){
+												 $vSelected = 'selected';
+											 }else{
+												 $vSelected = '';
+											 }
+											 echo '<option value="'.$center->id.'" '.$vSelected.'>'.$center->cen_name.'</option>';
+										 }
+										echo '</select>';
+									}
+										?>
+                                    </div>
+									<span style='color:red'><?php echo $centerErr ; ?></span>
+                                </div>
+								
+								                                    <div class="form-input">
+                                    
+                                   The information collected in this form is based on a requirement mandated by NSDC.
+                                    It is for the purpose of creating your profile on this platform.
+                                    We will not sell, trade, or rent this personal information to third parties or share it without your consent.<br>
+                                    </div>
+                               
+                            </div>
+          
+                        </div>
+                        
+                        <div class="form-submit">
+						<?php if(!empty($uidd)) { ?>
+										
+                          <input type="submit" value="Update" class="submit" id="update" name="update" />
+						<?php } else { ?>
+
+						 <input type="submit" value="Submit" class="submit" id="submit" name="submit" />
+						<?php } ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+<style>
+.active_step{
+	height: 50px;
+  width: 200px;
+  background-color: #de0505;
+  border-radius: 5px;
+text-align:left;  
+  color:#ffffff;
+  float:left;
+  margin:20px 20px 20px 20px;
+   padding:15px 15px 15px 15px;
+  text-align:left;
+}
+.inactive_step{
+	text-align:left;
+	height: 50px;
+  width: 200px;
+  background-color: #eeeeee;
+  border-radius: 5px;;
+  display: inline-block;  
+  color:#666666;
+  float:left;
+  margin:20px 20px 20px 20px;
+  padding:15px 15px 15px 15px;
+}
+</style>
+
+<?php
+
+echo $OUTPUT->footer();

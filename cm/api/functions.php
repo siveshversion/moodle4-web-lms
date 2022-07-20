@@ -675,8 +675,8 @@ function create_course()
     $params->wstoken   = $wstoken;
     AddCoursetoBU($params);
     if ($enrollBuUsersChk) {
-    // bulk BU user enrollment
-    //  EnrollBUCoursetoUsers($params);
+     // bulk BU user enrollment
+     //  EnrollBUCoursetoUsers($params);
     }
    }
    $arrResults['Data'] = $response;
@@ -855,7 +855,7 @@ function getCourseUsers()
 
  $enrolled_userids_arr = getEnrolledUsers($course_id, $moodledata);
 
- $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') $append_query";
+ $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') $append_query order by id DESC";
  $res = $DB->get_records_sql($sql);
  $i   = 1;
  foreach ($res as $rec) {
@@ -1312,15 +1312,13 @@ function listLP()
   $q   = "select id,buid,lpname,coursecnt,usercnt,lpstatus,lpdays,threshold,lpdesc,course,creator from {cm_admin_learning_path} where lpstatus ='active' $append_query order by id DESC";
   $lps = $DB->get_records_sql($q);
   foreach ($lps as $rec) {
-   $new_data                 = new stdClass();
-   $new_data->lp_name        = $rec->lpname;
-   if($rec->buid)
-   {
-    $q1 = "Select * from {$CFG->prefix}cm_business_units where id= $rec->buid";
-    $burec = $DB->get_record_sql($q1);
-    $BuName = $burec->bu_name;             
-   }
-   else{
+   $new_data          = new stdClass();
+   $new_data->lp_name = $rec->lpname;
+   if ($rec->buid) {
+    $q1     = "Select * from {$CFG->prefix}cm_business_units where id= $rec->buid";
+    $burec  = $DB->get_record_sql($q1);
+    $BuName = $burec->bu_name;
+   } else {
     $BuName = '';
    }
 
@@ -2232,13 +2230,13 @@ function courseReport()
  $user->cm_bu_id = $BU->id;
 
  if ($siteAdmin) {
-  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1";
+  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1 order by c.id desc";
   $courses = $DB->get_records_sql($q1);
  } else if ($buId) {
-  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1 and c.id in($courseids_in)";
+  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1 and c.id in($courseids_in) order by c.id desc";
   $courses = $DB->get_records_sql($q1);
  } else {
-  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1";
+  $q1      = "SELECT c.id,c.fullname,c.shortname FROM {course} c where c.visible = 1 and c.category !=0 and c.id > 1 order by c.id desc";
   $courses = $DB->get_records_sql($q1);
  }
  $row = 0;
@@ -2697,7 +2695,7 @@ function userCourseReport()
  $siteadmins     = $siteadmins_rec->value;
  $q              = "select u.id,u.firstname,u.lastname,u.email, u.timecreated,u.suspended,u.username,u.lastaccess
                  from {$CFG->prefix}user u where u.deleted = 0 and u.id > 1 and
-                 u.id NOT IN($siteadmins)";
+                 u.id NOT IN($siteadmins) order by u.id DESC";
 
  $res = $DB->get_records_sql($q);
 
@@ -3012,7 +3010,7 @@ function getPointsReport()
  global $DB, $CFG;
  $response = array();
 
- $q   = "select c.id as userid,c.firstname,c.lastname,c.email from {$CFG->prefix}user c where c.deleted=0 and c.suspended=0 and c.id > 2  GROUP BY c.id ";
+ $q   = "select c.id as userid,c.firstname,c.lastname,c.email from {$CFG->prefix}user c where c.deleted=0 and c.suspended=0 and c.id > 2  GROUP BY c.id order by c.id DESC";
  $res = $DB->get_records_sql($q);
 
  $i = 1;
