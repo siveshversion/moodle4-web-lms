@@ -2345,8 +2345,7 @@ function get_progress_by_cid($cid, $user, $progress_rate)
   }
 
   if ($progress_rate == 50) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
-   if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+   if (($compteprogress != 0) && ($compteprogress != 100)) {
     $sqll             = $DB->get_record_sql("select *  from {course} where id= $cid");
     $myinprogcourse[] = $sqll;
    }
@@ -2354,8 +2353,7 @@ function get_progress_by_cid($cid, $user, $progress_rate)
   }
 
   if ($progress_rate == 0) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
-   if (empty($courselastaccess->cout)) {
+   if ($compteprogress == 0) {
     $sqll               = $DB->get_record_sql("select *  from {course} where id= $cid ");
     $mynonstartcourse[] = $sqll;
    }
@@ -2418,9 +2416,7 @@ function get_progress_by_uid($uid, $user, $progress_rate)
   }
 
   if ($progress_rate == 50) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id and userid = $uid ");
-   if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
-    //if($courselastaccess->cout > 0){
+   if (($compteprogress != 0) && ($compteprogress != 100)) {
     $sqll             = $DB->get_record_sql("select *  from {course} where id= $course->id");
     $myinprogcourse[] = $sqll;
    }
@@ -2428,8 +2424,7 @@ function get_progress_by_uid($uid, $user, $progress_rate)
   }
 
   if ($progress_rate == 0) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id  and userid = $uid ");
-   if (empty($courselastaccess->cout)) {
+   if ($compteprogress == 0) {
     $sqll               = $DB->get_record_sql("select *  from {course} where id= $course->id ");
     $mynonstartcourse[] = $sqll;
    }
@@ -2588,8 +2583,7 @@ function get_uids_progress($cid, $u, $progress_rate)
   }
 
   if ($progress_rate == 50) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
-   if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+   if (($compteprogress != 0) && ($compteprogress != 100)) {
     $sqll             = $DB->get_record_sql("select *  from {course} where id= $cid");
     $myinprogcourse[] = $sqll;
     $userids_arr[]    = $user;
@@ -2597,8 +2591,7 @@ function get_uids_progress($cid, $u, $progress_rate)
   }
 
   if ($progress_rate == 0) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $cid  and userid = $user->id ");
-   if (empty($courselastaccess->cout)) {
+   if ($compteprogress == 0) {
     $sqll               = $DB->get_record_sql("select *  from {course} where id= $cid ");
     $mynonstartcourse[] = $sqll;
     $userids_arr[]      = $user;
@@ -2653,8 +2646,7 @@ function get_cids_progress($userId, $u, $progress_rate)
   }
 
   if ($progress_rate == 50) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id  and userid = $userId ");
-   if (($courselastaccess->cout >= 1) && ($compteprogress != 100)) {
+    if (($compteprogress != 0) && ($compteprogress != 100)) {
     $sqll              = $DB->get_record_sql("select *  from {course} where id= $course->id");
     $myinprogcourse[]  = $sqll;
     $result_cids_arr[] = $course;
@@ -2662,8 +2654,7 @@ function get_cids_progress($userId, $u, $progress_rate)
   }
 
   if ($progress_rate == 0) {
-   $courselastaccess = $DB->get_record_sql("select count(id) as cout from {user_lastaccess}  where courseid = $course->id  and userid = $userId ");
-   if (empty($courselastaccess->cout)) {
+    if (($compteprogress == 0)) {
     $sqll               = $DB->get_record_sql("select *  from {course} where id= $course->id ");
     $mynonstartcourse[] = $sqll;
     $result_cids_arr[]  = $course;
