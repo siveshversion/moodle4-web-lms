@@ -1440,29 +1440,31 @@ function getLPCoursesReport()
 {
  global $DB, $CFG;
  $response = array();
- $lpid = $_POST['lpId'];
- 
- if(!empty($lpid))
- {
-$q  = "SELECT id as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpid";
-$lp_courseids  = $DB->get_records_sql($q);
+ $lpid     = $_POST['lpId'];
+
+ if (!empty($lpid)) {
+  $q            = "SELECT lp_courseid as cid FROM {$CFG->prefix}cm_lp_course where lp_id= $lpid";
+  $lp_courseids = $DB->get_records_sql($q);
  }
 
-  foreach ($lp_courseids as $rec) {
-   $new_data                   = new stdClass();
-   $q0 = "Select * from {course} where id= $rec->cid";
-   $course  = $DB->get_record_sql($q0);
-   $q1 = "Select * from {cm_admin_learning_path} where id= $lpid";
-   $lp  = $DB->get_record_sql($q1);
-   $new_data->course_fullname  = $course->fullname;
-   $new_data->lp_name  = $lp->lpname;
-   $response[] = $new_data;
-
-  }
-  $arrResults['Data'] = $response;
+ $i = 1;
+ foreach ($lp_courseids as $rec) {
+  $new_data                  = new stdClass();
+  $q0                        = "Select * from {course} where id= $rec->cid";
+  $course                    = $DB->get_record_sql($q0);
+  $q1                        = "Select * from {cm_admin_learning_path} where id= $lpid";
+  $lp                        = $DB->get_record_sql($q1);
+  $new_data->sno             = $i++;
+  $new_data->course_id       = $course->id;
+  $new_data->course_fullname = $course->fullname;
+  $new_data->lp_id           = $lpid;
+  $new_data->lp_name         = $lp->lpname;
+  $new_data->lp_users_cnt    = LpUserscnt($lpid);
+  $response[]                = $new_data;
+ }
+ $arrResults['Data'] = $response;
  return $arrResults;
 }
-
 
 function getLPCourseCnt($lpid)
 {
@@ -1470,6 +1472,23 @@ function getLPCourseCnt($lpid)
  $q  = "SELECT count(id) as lpcoursecnt FROM {$CFG->prefix}cm_lp_course where lp_id= $lpid";
  $lp = $DB->get_record_sql($q);
  return $lp->lpcoursecnt;
+}
+
+function getLPdetailsByid(){
+  global $DB, $CFG;
+  $response = array();
+  $new_data = new stdClass();
+  $lpid     = $_POST['lpId'];
+ 
+  if (!empty($lpid)) {
+   $q            = "SELECT lpname FROM {cm_admin_learning_path} where id= $lpid";
+   $lp = $DB->get_record_sql($q); 
+  $new_data->lp_name         = $lp->lpname;
+  $new_data->lp_users_cnt   = LpUserscnt($lpid);
+}
+  $response['Data'] = $new_data;
+
+  return $response;
 }
 
 function getAssignedLPCourses($cid, $lpid)
@@ -2674,7 +2693,7 @@ function get_cids_progress($userId, $u, $progress_rate)
   }
 
   if ($progress_rate == 50) {
-    if (($compteprogress != 0) && ($compteprogress != 100)) {
+   if (($compteprogress != 0) && ($compteprogress != 100)) {
     $sqll              = $DB->get_record_sql("select *  from {course} where id= $course->id");
     $myinprogcourse[]  = $sqll;
     $result_cids_arr[] = $course;
@@ -2682,7 +2701,7 @@ function get_cids_progress($userId, $u, $progress_rate)
   }
 
   if ($progress_rate == 0) {
-    if (($compteprogress == 0)) {
+   if (($compteprogress == 0)) {
     $sqll               = $DB->get_record_sql("select *  from {course} where id= $course->id ");
     $mynonstartcourse[] = $sqll;
     $result_cids_arr[]  = $course;
@@ -3779,3 +3798,34 @@ function getCourseAvgRating($cid)
  }
  return $avgRating;
 }
+
+
+function getLPusersReport()
+{
+ global $DB, $CFG;
+ $response = array();
+ $lpid     = $_POST['lpId'];
+
+ if (!empty($lpid)) {
+  $assigned_userids_arr = getLPAssignedUsers($lpid);
+  $userids              = implode(',', $assigned_userids_arr);
+  if (!empty($userids)) {
+    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') and id in($userids)";
+    $res = $DB->get_records_sql($sql); 
+  }
+ }
+   
+  $i   = 1;
+  foreach ($res as $rec) {
+   $new_data                = new stdClass();
+   $new_data->sno         = $i++;
+   $new_data->user_name     = $rec->username;
+   $new_data->user_fullname = $rec->fullname;
+   $new_data->user_id       = $rec->id;
+   $response[]                = $new_data;
+  }
+
+ $arrResults['Data'] = $response;
+ return $arrResults;
+}
+
