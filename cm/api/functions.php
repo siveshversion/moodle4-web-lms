@@ -1329,6 +1329,7 @@ function listLP()
    $new_data->lp_threshold   = $rec->threshold;
    $new_data->lp_status      = $rec->lpstatus;
    $new_data->lp_days        = $rec->lpdays;
+   $new_data->lp_completed   = get_lp_completion_details($rec->id);
    $response[]               = $new_data;
   }
   $arrResults['Data'] = $response;
@@ -3828,4 +3829,5 @@ function getLPusersReport()
  $arrResults['Data'] = $response;
  return $arrResults;
 }
+
 
