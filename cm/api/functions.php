@@ -1475,21 +1475,22 @@ function getLPCourseCnt($lpid)
  return $lp->lpcoursecnt;
 }
 
-function getLPdetailsByid(){
-  global $DB, $CFG;
-  $response = array();
-  $new_data = new stdClass();
-  $lpid     = $_POST['lpId'];
- 
-  if (!empty($lpid)) {
-   $q            = "SELECT lpname FROM {cm_admin_learning_path} where id= $lpid";
-   $lp = $DB->get_record_sql($q); 
-  $new_data->lp_name         = $lp->lpname;
-  $new_data->lp_users_cnt   = LpUserscnt($lpid);
-}
-  $response['Data'] = $new_data;
+function getLPdetailsByid()
+{
+ global $DB, $CFG;
+ $response = array();
+ $new_data = new stdClass();
+ $lpid     = $_POST['lpId'];
 
-  return $response;
+ if (!empty($lpid)) {
+  $q                      = "SELECT lpname FROM {cm_admin_learning_path} where id= $lpid";
+  $lp                     = $DB->get_record_sql($q);
+  $new_data->lp_name      = $lp->lpname;
+  $new_data->lp_users_cnt = LpUserscnt($lpid);
+ }
+ $response['Data'] = $new_data;
+
+ return $response;
 }
 
 function getAssignedLPCourses($cid, $lpid)
@@ -2562,6 +2563,7 @@ function courseDetailedReport()
   $new_data->user_name     = $user_res->username;
   $new_data->user_fullname = $user_res->fullname;
   $new_data->user_id       = $user_res->id;
+  $new_data->completed_on  = get_completed_timestamp($user_res->id, $course->id, 'completed');
   $BU                      = getBuByUid($user_res->id);
   $new_data->bu_name       = $BU->bu_name;
   if ($bu_id == $BU->id) {
@@ -2663,9 +2665,17 @@ function get_cids_progress($userId, $u, $progress_rate)
   $totals = $DB->get_records_sql("select * from {course_modules} where course = $course->id and deletioninprogress = 0 and module != 9 ");
   $total  = count($totals);
 
-  $attempt = $DB->get_records_sql("select a.id  from {course_modules_completion} as a
+  if (!empty($_POST['edate']) && ($progress_rate === 100)) {
+   $stimestamp   = makeTimestamp($_POST['sdate']);
+   $etimestamp   = makeEndTimestamp($_POST['edate']);
+   $append_query = "and a.timemodified between $stimestamp and $etimestamp";
+  } else {
+   $append_query = '';
+  }
+
+  $attempt = $DB->get_records_sql("select a.id,a.timemodified from {course_modules_completion} as a
          join {course_modules} as b on a.coursemoduleid = b.id
-         where a.userid = $userId and b.course = $course->id and b.module != 9 and completionstate >= 1");
+         where a.userid = $userId and b.course = $course->id and b.module != 9 and completionstate >= 1 $append_query");
 
   $attempted = count($attempt);
 
@@ -2827,15 +2837,16 @@ function userDetailedReport()
 
   $i = 0;
   foreach ($courseids_arr as $course) {
-   $course                = $DB->get_record('course', array("id" => $course->id));
-   $new_data              = new stdClass();
-   $new_data->sl_no       = ++$i;
-   $new_data->course_name = $course->fullname;
-   $new_data->enrolled_on = get_activity_timestamp($paramUser->id, $course->id, 'timestart');
-   $new_data->last_access = get_activity_timestamp($paramUser->id, $course->id, 'last_access');
-   $ext1                  = in_array($course->id, $comp_arr);
-   $ext2                  = in_array($course->id, $inp_arr);
-   $ext3                  = in_array($course->id, $nots_arr);
+   $course                 = $DB->get_record('course', array("id" => $course->id));
+   $new_data               = new stdClass();
+   $new_data->sl_no        = ++$i;
+   $new_data->course_name  = $course->fullname;
+   $new_data->enrolled_on  = get_activity_timestamp($paramUser->id, $course->id, 'timestart');
+   $new_data->last_access  = get_activity_timestamp($paramUser->id, $course->id, 'last_access');
+   $new_data->completed_on = get_completed_timestamp($paramUser->id, $course->id, $type);
+   $ext1                   = in_array($course->id, $comp_arr);
+   $ext2                   = in_array($course->id, $inp_arr);
+   $ext3                   = in_array($course->id, $nots_arr);
    if ($ext1) {
     $new_data->status = 'Completed';
    } else if ($ext2) {
@@ -3800,7 +3811,6 @@ function getCourseAvgRating($cid)
  return $avgRating;
 }
 
-
 function getLPusersReport()
 {
  global $DB, $CFG;
@@ -3811,23 +3821,63 @@ function getLPusersReport()
   $assigned_userids_arr = getLPAssignedUsers($lpid);
   $userids              = implode(',', $assigned_userids_arr);
   if (!empty($userids)) {
-    $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') and id in($userids)";
-    $res = $DB->get_records_sql($sql); 
+   $sql = "SELECT id,concat(firstname,' ',lastname) as fullname,username FROM {$CFG->prefix}user where deleted = 0 and username not in('guest','admin') and id in($userids)";
+   $res = $DB->get_records_sql($sql);
   }
  }
-   
-  $i   = 1;
-  foreach ($res as $rec) {
-   $new_data                = new stdClass();
-   $new_data->sno         = $i++;
-   $new_data->user_name     = $rec->username;
-   $new_data->user_fullname = $rec->fullname;
-   $new_data->user_id       = $rec->id;
-   $response[]                = $new_data;
-  }
+
+ $i = 1;
+ foreach ($res as $rec) {
+  $new_data                = new stdClass();
+  $new_data->sno           = $i++;
+  $new_data->user_name     = $rec->username;
+  $new_data->user_fullname = $rec->fullname;
+  $new_data->user_id       = $rec->id;
+  $response[]              = $new_data;
+ }
 
  $arrResults['Data'] = $response;
  return $arrResults;
 }
 
+function get_completed_timestamp($uid, $cid, $type)
+{
+ global $DB;
+ $res = "-";
 
+ if ($type == 'completed') {
+
+  $totals = $DB->get_records_sql("select * from {course_modules} where course = $cid and deletioninprogress = 0 and module != 9 ");
+  $total  = count($totals);
+
+  $attempt = $DB->get_records_sql("select a.id,a.timemodified from {course_modules_completion} as a
+  join {course_modules} as b on a.coursemoduleid = b.id
+  where a.userid = $uid and b.course = $cid and b.module != 9 and completionstate >= 1");
+
+  $attempted = count($attempt);
+
+  $value        = $attempted / $total * 100;
+  $comptnmethod = $DB->get_record('course_completion_aggr_methd', array('criteriatype' => 4, 'course' => $cid));
+  if ($comptnmethod->method == 2) {
+   if ($attempted >= 1) {
+    $compteprogress = 100;
+   } else {
+    $compteprogress = 0;
+   }
+  } else {
+   if ($attempted != 0) {
+    $compteprogress = number_format($value, 0);
+   } else {
+    $compteprogress = 0;
+   }
+  }
+
+  if ($compteprogress == 100) {
+   foreach ($attempt as $finalattempt) {
+    $res = (!empty($finalattempt->timemodified)) ? date('d-m-Y', $finalattempt->timemodified) : '-';
+   }
+  }
+ }
+
+ return $res;
+}

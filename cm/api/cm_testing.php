@@ -14,6 +14,10 @@ global $DB, $CFG;
 
 echo '<pre>';
 
+$res =get_completed_timestamp(51,65,'completed');
+print_r($res);
+exit;
+
 $_POST['lpId'] = 24;
 $res = getLPCoursesReport();
 
