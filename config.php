@@ -9,7 +9,7 @@ $CFG->dblibrary = 'native';
 $CFG->dbhost    = 'localhost';
 $CFG->dbname    = 'moodle4db';
 $CFG->dbuser    = 'root';
-$CFG->dbpass    = 'justD0it';
+$CFG->dbpass    = 'your_Own_Password';
 $CFG->prefix    = 'mdl_';
 $CFG->dboptions = array (
   'dbpersist' => 0,
@@ -18,7 +18,7 @@ $CFG->dboptions = array (
   'dbcollation' => 'utf8mb4_unicode_ci',
 );
 
-$CFG->wwwroot   = 'http://localhost/moodle4';
+$CFG->wwwroot   = 'http://localhost/moodle4-web-lms';
 $CFG->dataroot  = 'C:\\xampp\\moodle4data';
 $CFG->admin     = 'admin';
 
